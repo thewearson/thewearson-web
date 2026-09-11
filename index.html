@@ -10,27 +10,34 @@
 
     <div class="content-wrapper">
         <div class="brand-container">
-            <img src="logo_dark.png" alt="THE WEARS" class="brand-logo">
+            <!-- Logoya ID verdik ve varsayılan olarak dark olanı çağırdık -->
+            <img src="logo_dark.png" alt="THE WEARS" class="brand-logo" id="brandLogo">
             
-            <!-- Etkileşimli Switch -->
             <div class="switch" id="themeSwitch">
                 <div class="slider"></div>
             </div>
         </div>
         
         <div class="coming-soon">COMING SOON</div>
-        <!-- İnce ve Geniş İmza -->
         <div class="signature">BY RACKSGRID CO.</div>
     </div>
 
     <script>
         const themeSwitch = document.getElementById('themeSwitch');
         const body = document.body;
+        const brandLogo = document.getElementById('brandLogo');
 
-        // Switch'e tıklandığında temayı tetikler
         themeSwitch.addEventListener('click', () => {
+            // Switch ve arka plan temasını değiştir
             themeSwitch.classList.toggle('active');
             body.classList.toggle('light-theme');
+
+            // Temaya göre doğru logoyu yükle
+            if (body.classList.contains('light-theme')) {
+                brandLogo.src = 'logo_light.png';
+            } else {
+                brandLogo.src = 'logo_dark.png';
+            }
         });
     </script>
 </body>
