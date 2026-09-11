@@ -1,133 +1,162 @@
+/* Varsayılan Tema: Karanlık */
+:root {
+    --bg-color: #050505;
+    --text-color: #FFFFFF;
+    --switch-bg: #222222;
+    --switch-slider: #444444;
+    --switch-on-text: #050505;
+    --coming-soon-color: #666666;
+    --signature-color: #444444;
+    --logo-filter: invert(1); /* Logon siyahsa karanlık temada beyaza çevirir. Zaten beyazsa bu satırı silebilirsin. */
+}
+
+/* Aktif Tema: Aydınlık */
+body.light-theme {
+    --bg-color: #FAFAFA;
+    --text-color: #111111;
+    --switch-bg: #EAEAEA;
+    --switch-slider: #111111;
+    --switch-on-text: #FFFFFF;
+    --coming-soon-color: #777777;
+    --signature-color: #BBBBBB;
+    --logo-filter: invert(0); /* Logonun orijinal (siyah) rengine döndürür */
+}
+
 body {
     margin: 0;
     padding: 0;
-    background-color: #FAFAFA; /* Premium kırık beyaz / açık gri */
-    color: #111111; /* Koyu antrasit siyah */
+    background-color: var(--bg-color);
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
     height: 100vh;
     overflow: hidden;
-    position: relative; /* İmzanın alta yapışması için gerekli */
+    transition: background-color 0.6s ease;
+}
+
+.content-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
 }
 
 .brand-container {
     display: flex;
     align-items: center;
     gap: 20px;
-    font-size: 4rem;
-    font-weight: 800;
-    letter-spacing: -1.5px; /* Premium ve modern görünüm için harf aralığını daralttık */
-    text-transform: uppercase;
+    animation: fadeIn 1.5s ease-out forwards;
 }
 
-.brand-text {
-    color: #111111;
+.brand-logo {
+    height: 60px; /* Logonun yüksekliği. Gerekirse bu değeri değiştirebilirsin */
+    width: auto;
+    filter: var(--logo-filter);
+    transition: filter 0.6s ease;
 }
 
-/* Switch Tasarımı - Beyaz Temaya Uygun */
+/* Etkileşimli Switch Tasarımı */
 .switch {
     position: relative;
     width: 110px;
     height: 56px;
-    background-color: #EAEAEA; /* Kapalıyken açık gri */
+    background-color: var(--switch-bg);
     border-radius: 50px;
     display: flex;
     align-items: center;
     padding: 6px;
     box-sizing: border-box;
-    box-shadow: inset 0 2px 6px rgba(0,0,0,0.05); /* Yumuşak iç gölge */
-    overflow: hidden;
-    /* Açıldığında switch arka planının kararma animasyonu */
-    animation: switchBg 0.2s 1.2s forwards; 
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: background-color 0.6s ease;
 }
 
-/* Kayan Yuvarlak Parça */
 .slider {
     position: absolute;
     width: 44px;
     height: 44px;
-    background-color: #111111; /* Kapalıyken koyu slider */
+    background-color: var(--switch-slider);
     border-radius: 50%;
     left: 6px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    /* Kayma Animasyonu */
-    animation: slideSwitch 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.5s forwards;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transition: left 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55), background-color 0.6s ease;
     z-index: 2;
 }
 
-/* ON Yazısı */
 .switch-text-on {
     position: absolute;
     left: 18px;
     font-size: 1.2rem;
     font-weight: bold;
-    color: #FFFFFF; /* Switch siyahlaştığında içeride beyaz görünecek */
+    color: var(--switch-on-text);
     opacity: 0;
     z-index: 1;
-    animation: showOn 0.1s 1.1s forwards;
+    transition: opacity 0.4s ease;
+}
+
+/* Switch tıklandığında (Açık konuma geçtiğinde) olacaklar */
+.switch.active .slider {
+    left: calc(100% - 50px);
+    background-color: #FFFFFF; /* Aydınlık temaya geçince slider beyaz olur */
+}
+
+.switch.active .switch-text-on {
+    opacity: 1;
 }
 
 .coming-soon {
-    margin-top: 30px;
-    font-size: 0.95rem;
+    margin-top: 50px;
+    font-size: 1rem;
     font-weight: 500;
-    letter-spacing: 12px;
-    color: #777777; /* Daha zarif, yumuşak bir gri */
-    opacity: 0;
-    transform: translateY(20px);
-    animation: fadeUp 1s 1.5s ease-out forwards;
-}
-
-/* Racksgrid co. İmzası */
-.signature {
-    position: absolute;
-    bottom: 40px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 4px;
-    color: #CCCCCC;
+    letter-spacing: 16px;
+    color: var(--coming-soon-color);
     text-transform: uppercase;
+    transition: color 0.6s ease;
     opacity: 0;
-    /* En son, yavaşça belirmesi için */
-    animation: fadeIn 2s 2s ease-out forwards; 
+    transform: translateY(15px);
+    animation: fadeUp 1s 0.5s ease-out forwards;
 }
 
-/* Animasyon Keyframeleri */
-@keyframes slideSwitch {
-    100% {
-        left: calc(100% - 50px);
-        background-color: #FFFFFF; /* Kaydığında slider beyaz olur */
-    }
+/* İnce ve Geniş İmza */
+.signature {
+    margin-top: 20px;
+    font-size: 0.65rem;
+    font-weight: 300; /* İnce font görünümü */
+    letter-spacing: 22px; /* Geniş harf aralığı */
+    color: var(--signature-color);
+    text-transform: uppercase;
+    text-indent: 22px; /* Ortalamayı bozmamak için son harfin boşluğunu dengeler */
+    transition: color 0.6s ease;
+    opacity: 0;
+    animation: fadeUp 1s 1s ease-out forwards;
 }
 
-@keyframes switchBg {
-    100% { background-color: #111111; } /* Kaydığında arka plan siyah olur */
-}
-
-@keyframes showOn {
-    100% { opacity: 1; }
+/* Açılış Animasyonları */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes fadeUp {
-    100% {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
         opacity: 1;
         transform: translateY(0);
     }
 }
 
-@keyframes fadeIn {
-    100% { opacity: 1; }
-}
-
 /* Mobil Uyumluluk */
 @media (max-width: 768px) {
-    .brand-container { font-size: 2.2rem; gap: 12px; }
-    .switch { width: 80px; height: 42px; }
-    .slider { width: 30px; height: 30px; }
-    .switch-text-on { font-size: 0.9rem; left: 12px; }
-    .coming-soon { font-size: 0.85rem; letter-spacing: 8px; }
-    .signature { bottom: 25px; font-size: 0.65rem; }
+    .brand-container { gap: 15px; flex-direction: column; }
+    .brand-logo { height: 45px; }
+    .switch { width: 90px; height: 46px; }
+    .slider { width: 34px; height: 34px; }
+    .switch.active .slider { left: calc(100% - 40px); }
+    .switch-text-on { font-size: 1rem; left: 14px; }
+    .coming-soon { font-size: 0.9rem; letter-spacing: 12px; margin-top: 40px; }
+    .signature { font-size: 0.55rem; letter-spacing: 16px; text-indent: 16px; margin-top: 15px; }
 }
