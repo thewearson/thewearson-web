@@ -1,23 +1,19 @@
 /* Varsayılan Tema: Karanlık */
 :root {
     --bg-color: #050505;
-    --text-color: #FFFFFF;
     --switch-bg: #222222;
     --switch-slider: #444444;
     --coming-soon-color: #666666;
     --signature-color: #444444;
-    --logo-filter: invert(1); 
 }
 
 /* Aktif Tema: Aydınlık */
 body.light-theme {
     --bg-color: #FAFAFA;
-    --text-color: #111111;
     --switch-bg: #EAEAEA;
     --switch-slider: #111111;
     --coming-soon-color: #777777;
     --signature-color: #BBBBBB;
-    --logo-filter: invert(0); 
 }
 
 body {
@@ -50,8 +46,8 @@ body {
 .brand-logo {
     height: 60px; 
     width: auto;
-    filter: var(--logo-filter);
-    transition: filter 0.6s ease;
+    /* Logolar arası geçişte yumuşak bir his vermesi için eklendi */
+    transition: opacity 0.3s ease; 
 }
 
 /* Etkileşimli Switch Tasarımı */
@@ -82,7 +78,6 @@ body {
     z-index: 2;
 }
 
-/* Switch tıklandığında (Açık konuma geçtiğinde) olacaklar */
 .switch.active .slider {
     left: calc(100% - 50px);
     background-color: #FFFFFF; 
@@ -115,7 +110,7 @@ body {
     animation: fadeUp 1s 1s ease-out forwards;
 }
 
-/* Açılış Animasyonları */
+/* Animasyonlar */
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
