@@ -8,18 +8,31 @@
 </head>
 <body>
 
-    <div class="brand-container">
-        <div class="brand-text">THE WEARS</div>
-        <div class="switch">
-            <span class="switch-text-on">ON</span>
-            <div class="slider"></div>
+    <div class="content-wrapper">
+        <div class="brand-container">
+            <img src="logo_dark.png" alt="THE WEARS" class="brand-logo">
+            
+            <!-- Etkileşimli Switch -->
+            <div class="switch" id="themeSwitch">
+                <span class="switch-text-on">ON</span>
+                <div class="slider"></div>
+            </div>
         </div>
+        
+        <div class="coming-soon">COMING SOON</div>
+        <!-- İnce ve Geniş İmza -->
+        <div class="signature">BY RACKSGRID CO.</div>
     </div>
 
-    <div class="coming-soon">COMING SOON</div>
+    <script>
+        const themeSwitch = document.getElementById('themeSwitch');
+        const body = document.body;
 
-    <!-- İmza Alanı -->
-    <div class="signature">racksgrid co.</div>
-
+        // Switch'e tıklandığında hem switch animasyonunu hem de temayı tetikler
+        themeSwitch.addEventListener('click', () => {
+            themeSwitch.classList.toggle('active');
+            body.classList.toggle('light-theme');
+        });
+    </script>
 </body>
 </html>
