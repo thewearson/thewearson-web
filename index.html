@@ -10,35 +10,104 @@
 
     <div class="content-wrapper">
         <div class="brand-container">
-            <!-- Logoya ID verdik ve varsayılan olarak dark olanı çağırdık -->
             <img src="logo_dark.png" alt="THE WEARS" class="brand-logo" id="brandLogo">
             
+            <!-- Etkileşimli Switch -->
             <div class="switch" id="themeSwitch">
                 <div class="slider"></div>
             </div>
         </div>
         
         <div class="coming-soon">COMING SOON</div>
+        <!-- İnce ve Geniş İmza -->
         <div class="signature">BY RACKSGRID CO.</div>
     </div>
 
     <script>
         const themeSwitch = document.getElementById('themeSwitch');
+        const slider = document.querySelector('.slider');
         const body = document.body;
         const brandLogo = document.getElementById('brandLogo');
 
-        themeSwitch.addEventListener('click', () => {
-            // Switch ve arka plan temasını değiştir
-            themeSwitch.classList.toggle('active');
-            body.classList.toggle('light-theme');
+        let isDragging = false;
+        let startX = 0;
+        let currentLeft = 0;
+        let isLight = false; // Varsayılan olarak karanlık açılır
 
-            // Temaya göre doğru logoyu yükle
-            if (body.classList.contains('light-theme')) {
+        // 1. Sürüklemeyi Başlat
+        const dragStart = (e) => {
+            isDragging = true;
+            startX = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
+            slider.style.transition = 'none'; // Sürüklerken gecikme olmaması için CSS animasyonunu kapat
+            themeSwitch.style.cursor = 'grabbing';
+            
+            // Switch boyutuna göre başlangıç noktasını belirle
+            const maxLeft = themeSwitch.offsetWidth - slider.offsetWidth - 6;
+            currentLeft = isLight ? maxLeft : 6;
+        };
+
+        // 2. Sürükleme Anı
+        const dragMove = (e) => {
+            if (!isDragging) return;
+            
+            const x = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
+            const deltaX = x - startX;
+            let newLeft = currentLeft + deltaX;
+            
+            const maxLeft = themeSwitch.offsetWidth - slider.offsetWidth - 6;
+            const minLeft = 6;
+
+            // Slider'ın switch dışına taşmasını engelle
+            if (newLeft < minLeft) newLeft = minLeft;
+            if (newLeft > maxLeft) newLeft = maxLeft;
+
+            slider.style.left = `${newLeft}px`;
+        };
+
+        // 3. Sürüklemeyi Bırak
+        const dragEnd = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            themeSwitch.style.cursor = 'grab';
+            
+            // Bırakıldığında CSS kayma animasyonunu tekrar aktif et
+            slider.style.transition = 'left 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55), background-color 0.6s ease';
+            
+            const maxLeft = themeSwitch.offsetWidth - slider.offsetWidth - 6;
+            const currentPos = parseInt(slider.style.left || 6);
+            const midPoint = maxLeft / 2;
+
+            // Manuel verilen değeri temizle, CSS sınıfları devralsın
+            slider.style.left = ''; 
+
+            // Eğer kaydırma işlemi switch'in yarısını geçtiyse temayı değiştir
+            if (currentPos > midPoint) {
+                isLight = true;
+                themeSwitch.classList.add('active');
+                body.classList.add('light-theme');
                 brandLogo.src = 'logo_light.png';
             } else {
+                isLight = false;
+                themeSwitch.classList.remove('active');
+                body.classList.remove('light-theme');
                 brandLogo.src = 'logo_dark.png';
             }
-        });
+        };
+
+        // Mouse (Masaüstü) Etkileşimleri
+        themeSwitch.addEventListener('mousedown', dragStart);
+        window.addEventListener('mousemove', dragMove);
+        window.addEventListener('mouseup', dragEnd);
+
+        // Touch (Mobil) Etkileşimleri
+        themeSwitch.addEventListener('touchstart', dragStart, { passive: false });
+        window.addEventListener('touchmove', (e) => {
+            if (isDragging) {
+                e.preventDefault(); // Sürüklerken telefon ekranının aşağı/yukarı kaymasını engeller
+                dragMove(e);
+            }
+        }, { passive: false });
+        window.addEventListener('touchend', dragEnd);
     </script>
 </body>
 </html>
