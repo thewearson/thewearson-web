@@ -4,10 +4,9 @@
     --text-color: #FFFFFF;
     --switch-bg: #222222;
     --switch-slider: #444444;
-    --switch-on-text: #050505;
     --coming-soon-color: #666666;
     --signature-color: #444444;
-    --logo-filter: invert(1); /* Logon siyahsa karanlık temada beyaza çevirir. Zaten beyazsa bu satırı silebilirsin. */
+    --logo-filter: invert(1); 
 }
 
 /* Aktif Tema: Aydınlık */
@@ -16,10 +15,9 @@ body.light-theme {
     --text-color: #111111;
     --switch-bg: #EAEAEA;
     --switch-slider: #111111;
-    --switch-on-text: #FFFFFF;
     --coming-soon-color: #777777;
     --signature-color: #BBBBBB;
-    --logo-filter: invert(0); /* Logonun orijinal (siyah) rengine döndürür */
+    --logo-filter: invert(0); 
 }
 
 body {
@@ -50,7 +48,7 @@ body {
 }
 
 .brand-logo {
-    height: 60px; /* Logonun yüksekliği. Gerekirse bu değeri değiştirebilirsin */
+    height: 60px; 
     width: auto;
     filter: var(--logo-filter);
     transition: filter 0.6s ease;
@@ -84,25 +82,10 @@ body {
     z-index: 2;
 }
 
-.switch-text-on {
-    position: absolute;
-    left: 18px;
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--switch-on-text);
-    opacity: 0;
-    z-index: 1;
-    transition: opacity 0.4s ease;
-}
-
 /* Switch tıklandığında (Açık konuma geçtiğinde) olacaklar */
 .switch.active .slider {
     left: calc(100% - 50px);
-    background-color: #FFFFFF; /* Aydınlık temaya geçince slider beyaz olur */
-}
-
-.switch.active .switch-text-on {
-    opacity: 1;
+    background-color: #FFFFFF; 
 }
 
 .coming-soon {
@@ -122,11 +105,11 @@ body {
 .signature {
     margin-top: 20px;
     font-size: 0.65rem;
-    font-weight: 300; /* İnce font görünümü */
-    letter-spacing: 22px; /* Geniş harf aralığı */
+    font-weight: 300; 
+    letter-spacing: 22px; 
     color: var(--signature-color);
     text-transform: uppercase;
-    text-indent: 22px; /* Ortalamayı bozmamak için son harfin boşluğunu dengeler */
+    text-indent: 22px; 
     transition: color 0.6s ease;
     opacity: 0;
     animation: fadeUp 1s 1s ease-out forwards;
@@ -156,7 +139,6 @@ body {
     .switch { width: 90px; height: 46px; }
     .slider { width: 34px; height: 34px; }
     .switch.active .slider { left: calc(100% - 40px); }
-    .switch-text-on { font-size: 1rem; left: 14px; }
     .coming-soon { font-size: 0.9rem; letter-spacing: 12px; margin-top: 40px; }
     .signature { font-size: 0.55rem; letter-spacing: 16px; text-indent: 16px; margin-top: 15px; }
 }
