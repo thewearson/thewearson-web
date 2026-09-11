@@ -14,7 +14,6 @@
             
             <!-- Etkileşimli Switch -->
             <div class="switch" id="themeSwitch">
-                <span class="switch-text-on">ON</span>
                 <div class="slider"></div>
             </div>
         </div>
@@ -28,7 +27,7 @@
         const themeSwitch = document.getElementById('themeSwitch');
         const body = document.body;
 
-        // Switch'e tıklandığında hem switch animasyonunu hem de temayı tetikler
+        // Switch'e tıklandığında temayı tetikler
         themeSwitch.addEventListener('click', () => {
             themeSwitch.classList.toggle('active');
             body.classList.toggle('light-theme');
