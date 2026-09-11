@@ -1,18 +1,16 @@
-/* İstersen buraya THE WEARS için kullandığın özel fontu import edebilirsin */
-/* @import url('...'); */
-
 body {
     margin: 0;
     padding: 0;
-    background-color: #050505;
-    color: #fff;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Özel fontunu buraya yazabilirsin */
+    background-color: #FAFAFA; /* Premium kırık beyaz / açık gri */
+    color: #111111; /* Koyu antrasit siyah */
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     height: 100vh;
     overflow: hidden;
+    position: relative; /* İmzanın alta yapışması için gerekli */
 }
 
 .brand-container {
@@ -20,28 +18,30 @@ body {
     align-items: center;
     gap: 20px;
     font-size: 4rem;
-    font-weight: 900;
-    letter-spacing: 2px;
+    font-weight: 800;
+    letter-spacing: -1.5px; /* Premium ve modern görünüm için harf aralığını daralttık */
     text-transform: uppercase;
 }
 
 .brand-text {
-    color: #ffffff;
+    color: #111111;
 }
 
-/* Switch Tasarımı */
+/* Switch Tasarımı - Beyaz Temaya Uygun */
 .switch {
     position: relative;
     width: 110px;
     height: 56px;
-    background-color: #222;
+    background-color: #EAEAEA; /* Kapalıyken açık gri */
     border-radius: 50px;
     display: flex;
     align-items: center;
     padding: 6px;
     box-sizing: border-box;
-    box-shadow: inset 0 4px 10px rgba(0,0,0,0.8);
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.05); /* Yumuşak iç gölge */
     overflow: hidden;
+    /* Açıldığında switch arka planının kararma animasyonu */
+    animation: switchBg 0.2s 1.2s forwards; 
 }
 
 /* Kayan Yuvarlak Parça */
@@ -49,10 +49,10 @@ body {
     position: absolute;
     width: 44px;
     height: 44px;
-    background-color: #333;
+    background-color: #111111; /* Kapalıyken koyu slider */
     border-radius: 50%;
     left: 6px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     /* Kayma Animasyonu */
     animation: slideSwitch 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.5s forwards;
     z-index: 2;
@@ -64,30 +64,47 @@ body {
     left: 18px;
     font-size: 1.2rem;
     font-weight: bold;
-    color: #050505;
+    color: #FFFFFF; /* Switch siyahlaştığında içeride beyaz görünecek */
     opacity: 0;
     z-index: 1;
-    /* ON yazısının görünme animasyonu */
-    animation: showOn 0.1s 1s forwards;
+    animation: showOn 0.1s 1.1s forwards;
 }
 
 .coming-soon {
     margin-top: 30px;
-    font-size: 1.2rem;
-    letter-spacing: 10px;
-    color: #666;
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 12px;
+    color: #777777; /* Daha zarif, yumuşak bir gri */
     opacity: 0;
     transform: translateY(20px);
-    /* Aşağıdan yukarı solma animasyonu */
     animation: fadeUp 1s 1.5s ease-out forwards;
+}
+
+/* Racksgrid co. İmzası */
+.signature {
+    position: absolute;
+    bottom: 40px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 4px;
+    color: #CCCCCC;
+    text-transform: uppercase;
+    opacity: 0;
+    /* En son, yavaşça belirmesi için */
+    animation: fadeIn 2s 2s ease-out forwards; 
 }
 
 /* Animasyon Keyframeleri */
 @keyframes slideSwitch {
     100% {
         left: calc(100% - 50px);
-        background-color: #fff;
+        background-color: #FFFFFF; /* Kaydığında slider beyaz olur */
     }
+}
+
+@keyframes switchBg {
+    100% { background-color: #111111; } /* Kaydığında arka plan siyah olur */
 }
 
 @keyframes showOn {
@@ -101,11 +118,16 @@ body {
     }
 }
 
+@keyframes fadeIn {
+    100% { opacity: 1; }
+}
+
 /* Mobil Uyumluluk */
 @media (max-width: 768px) {
-    .brand-container { font-size: 2.5rem; gap: 15px; }
-    .switch { width: 90px; height: 46px; }
-    .slider { width: 34px; height: 34px; }
-    .switch-text-on { font-size: 1rem; left: 14px; }
-    .coming-soon { font-size: 1rem; letter-spacing: 6px; }
+    .brand-container { font-size: 2.2rem; gap: 12px; }
+    .switch { width: 80px; height: 42px; }
+    .slider { width: 30px; height: 30px; }
+    .switch-text-on { font-size: 0.9rem; left: 12px; }
+    .coming-soon { font-size: 0.85rem; letter-spacing: 8px; }
+    .signature { bottom: 25px; font-size: 0.65rem; }
 }
