@@ -1,0 +1,111 @@
+/* İstersen buraya THE WEARS için kullandığın özel fontu import edebilirsin */
+/* @import url('...'); */
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #050505;
+    color: #fff;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Özel fontunu buraya yazabilirsin */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.brand-container {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 4rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.brand-text {
+    color: #ffffff;
+}
+
+/* Switch Tasarımı */
+.switch {
+    position: relative;
+    width: 110px;
+    height: 56px;
+    background-color: #222;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    padding: 6px;
+    box-sizing: border-box;
+    box-shadow: inset 0 4px 10px rgba(0,0,0,0.8);
+    overflow: hidden;
+}
+
+/* Kayan Yuvarlak Parça */
+.slider {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    background-color: #333;
+    border-radius: 50%;
+    left: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    /* Kayma Animasyonu */
+    animation: slideSwitch 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.5s forwards;
+    z-index: 2;
+}
+
+/* ON Yazısı */
+.switch-text-on {
+    position: absolute;
+    left: 18px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #050505;
+    opacity: 0;
+    z-index: 1;
+    /* ON yazısının görünme animasyonu */
+    animation: showOn 0.1s 1s forwards;
+}
+
+.coming-soon {
+    margin-top: 30px;
+    font-size: 1.2rem;
+    letter-spacing: 10px;
+    color: #666;
+    opacity: 0;
+    transform: translateY(20px);
+    /* Aşağıdan yukarı solma animasyonu */
+    animation: fadeUp 1s 1.5s ease-out forwards;
+}
+
+/* Animasyon Keyframeleri */
+@keyframes slideSwitch {
+    100% {
+        left: calc(100% - 50px);
+        background-color: #fff;
+    }
+}
+
+@keyframes showOn {
+    100% { opacity: 1; }
+}
+
+@keyframes fadeUp {
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mobil Uyumluluk */
+@media (max-width: 768px) {
+    .brand-container { font-size: 2.5rem; gap: 15px; }
+    .switch { width: 90px; height: 46px; }
+    .slider { width: 34px; height: 34px; }
+    .switch-text-on { font-size: 1rem; left: 14px; }
+    .coming-soon { font-size: 1rem; letter-spacing: 6px; }
+}
