@@ -1,6 +1,10 @@
 const easeInOutCubic = (t) =>
   t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2;
 
+const easeOutCubic = (t) => 1 - (1 - t) ** 3;
+const easeOut = (t) => 1 - (1 - t) ** 2;
+const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2);
+
 const clamp01 = (n) => Math.min(1, Math.max(0, n));
 
 function stickyProgress(section) {
@@ -9,26 +13,46 @@ function stickyProgress(section) {
   return clamp01(-section.getBoundingClientRect().top / range);
 }
 
+function burstScale(t) {
+  if (t <= 0) return 0.42;
+  if (t < 0.34) return 0.42 + 0.7 * easeOutCubic(t / 0.34);
+  if (t < 0.5) return 1.12 - 0.12 * easeInOut((t - 0.34) / 0.16);
+  return 1;
+}
+
+function burstOpacity(t) {
+  if (t <= 0) return 0;
+  if (t < 0.14) return easeOut(t / 0.14);
+  return 1;
+}
+
 const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const pill = document.getElementById("onPill");
 const comingSoon = document.getElementById("comingSoon");
 const frost = document.getElementById("frostShots");
 const wordCulture = document.getElementById("wordCulture");
 const wordArchive = document.getElementById("wordArchive");
-const chapterPill = document.querySelector("[data-chapter='pill']");
-const chapterSoon = document.querySelector("[data-chapter='soon']");
+const chapterHero = document.querySelector("[data-chapter='hero']");
 const chapterFrost = document.querySelector("[data-chapter='frost']");
 const chapterWords = document.querySelector("[data-chapter='words']");
+
+function emergeFromPill(t) {
+  const w = comingSoon.offsetWidth;
+  const h = comingSoon.offsetHeight;
+  const radius = Math.min(w, h) * 0.2 + easeOutCubic(t) * Math.hypot(w, h);
+
+  comingSoon.style.opacity = String(burstOpacity(t));
+  comingSoon.style.transform = `scale(${burstScale(t)})`;
+  comingSoon.style.clipPath = t >= 0.98 ? "none" : `circle(${radius}px at 0% 50%)`;
+}
 
 function tick() {
   if (reduced) return;
 
-  const on = easeInOutCubic(stickyProgress(chapterPill));
+  const heroP = stickyProgress(chapterHero);
+  const on = easeInOutCubic(clamp01(heroP / 0.4));
   pill.style.setProperty("--on", String(on));
-
-  const soon = easeInOutCubic(clamp01((stickyProgress(chapterSoon) - 0.08) / 0.42));
-  comingSoon.style.opacity = String(soon);
-  comingSoon.style.transform = `translateY(${(1 - soon) * 28}px)`;
+  emergeFromPill(clamp01((heroP - 0.36) / 0.4));
 
   const frostP = stickyProgress(chapterFrost);
   const clear = easeInOutCubic(clamp01(frostP / 0.55));

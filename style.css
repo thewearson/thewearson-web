@@ -51,7 +51,7 @@ img {
   left: 0;
   right: 0;
   z-index: 40;
-  padding: 16px 20px 0;
+  padding: 14px 16px 0;
   pointer-events: none;
 }
 
@@ -61,9 +61,10 @@ img {
   grid-template-columns: 44px minmax(0, 1fr) 44px;
   align-items: center;
   gap: 12px;
-  max-width: 920px;
-  margin: 0 auto;
-  padding: 10px 12px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 10px 16px;
   background: var(--paper);
   border: var(--stroke) solid var(--ink);
 }
@@ -89,13 +90,17 @@ img {
 }
 
 .header-logo img {
-  height: clamp(14px, 2.2vw, 22px);
+  height: clamp(16px, 2.4vw, 26px);
   width: auto;
 }
 
 .chapter {
   position: relative;
   height: 185vh;
+}
+
+.chapter-hero {
+  height: 240vh;
 }
 
 .chapter-frost {
@@ -113,26 +118,34 @@ img {
   overflow: hidden;
 }
 
-.chapter-pill .sticky {
-  display: block;
+.hero {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 5vw;
+}
+
+.hero-lockup {
+  display: flex;
+  align-items: center;
+  min-width: 0;
 }
 
 .pill {
-  --h: clamp(56px, 8vw, 88px);
+  --h: clamp(88px, 14vw, 200px);
   --aspect: 1.990196;
   --pad: calc(var(--h) * 12 / 102);
   --knob: calc(var(--h) - var(--pad) * 2);
   --travel: calc(var(--h) * var(--aspect) - var(--pad) * 2 - var(--knob));
   --on: 0;
-  position: absolute;
-  top: 50%;
-  right: 16vw;
+  position: relative;
+  flex: 0 0 auto;
   width: calc(var(--h) * var(--aspect));
   height: var(--h);
-  margin-top: calc(var(--h) / -2);
   background: var(--ink);
   border-radius: 999px;
   pointer-events: none;
+  z-index: 2;
 }
 
 .pill-knob {
@@ -145,7 +158,6 @@ img {
   border-radius: 50%;
 }
 
-.chapter-soon .sticky,
 .chapter-words .sticky {
   display: grid;
   place-items: center;
@@ -156,16 +168,23 @@ img {
   margin: 0;
   font-family: var(--display);
   font-weight: 400;
-  font-size: clamp(64px, 18vw, 220px);
+  font-size: clamp(52px, 14vw, 200px);
   line-height: 0.82;
   letter-spacing: 0.02em;
-  text-align: center;
+  text-align: left;
   white-space: nowrap;
 }
 
-#comingSoon {
+.emerge {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 0 -0.08em;
+  color: var(--ink);
   opacity: 0;
-  transform: translateY(24px);
+  transform: scale(0.42);
+  transform-origin: left center;
+  clip-path: circle(0 at 0% 50%);
+  will-change: transform, opacity, clip-path;
 }
 
 .word {
@@ -425,7 +444,7 @@ img {
   }
 
   .pill {
-    right: 10vw;
+    --h: clamp(72px, 22vw, 140px);
   }
 
   .display {
@@ -472,8 +491,7 @@ img {
   }
 
   .pill {
-    --h: 52px;
-    right: 8vw;
+    --h: clamp(64px, 26vw, 110px);
   }
 
   .frost .shots {
@@ -493,7 +511,12 @@ img {
     --on: 1;
   }
 
-  #comingSoon,
+  #comingSoon {
+    opacity: 1;
+    clip-path: none;
+    transform: scale(1);
+  }
+
   #wordCulture,
   #wordArchive {
     opacity: 1;
