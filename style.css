@@ -6,7 +6,8 @@
   --ph: #f5f5f5;
   --ph2: #eee;
   --stroke: 1.5px;
-  --header-h: 88px;
+  --header-h: 82px;
+  --lockup: clamp(40px, 4.2vw, 56px);
   --ui: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --display: "Bebas Neue", "Arial Narrow", Impact, sans-serif;
 }
@@ -108,7 +109,7 @@ img {
 }
 
 .chapter-words {
-  height: 200vh;
+  height: 260vh;
 }
 
 .sticky {
@@ -122,17 +123,18 @@ img {
   display: flex;
   align-items: center;
   height: 100%;
-  padding: 0 5vw;
+  padding: var(--header-h) 32px 0;
 }
 
 .hero-lockup {
   display: flex;
   align-items: center;
+  gap: 16px;
   min-width: 0;
 }
 
 .pill {
-  --h: clamp(88px, 14vw, 200px);
+  --h: var(--lockup);
   --aspect: 1.990196;
   --pad: calc(var(--h) * 12 / 102);
   --knob: calc(var(--h) - var(--pad) * 2);
@@ -168,9 +170,9 @@ img {
   margin: 0;
   font-family: var(--display);
   font-weight: 400;
-  font-size: clamp(52px, 14vw, 200px);
-  line-height: 0.82;
-  letter-spacing: 0.02em;
+  font-size: var(--lockup);
+  line-height: 1;
+  letter-spacing: 0.08em;
   text-align: left;
   white-space: nowrap;
 }
@@ -178,10 +180,12 @@ img {
 .emerge {
   position: relative;
   z-index: 1;
-  margin: 0 0 0 -0.08em;
+  display: flex;
+  align-items: center;
+  height: var(--lockup);
   color: var(--ink);
   opacity: 0;
-  transform: scale(0.42);
+  transform: scale(0.92);
   transform-origin: left center;
   clip-path: circle(0 at 0% 50%);
   will-change: transform, opacity, clip-path;
@@ -205,6 +209,11 @@ img {
 #wordArchive {
   opacity: 0;
   transform: translate(20%, -50%);
+}
+
+#wordStars {
+  opacity: 0;
+  transform: translate(-120%, -50%);
 }
 
 .frost {
@@ -357,8 +366,8 @@ img {
 }
 
 .features {
-  padding: 12vh 20px 16vh;
-  max-width: 960px;
+  padding: 12vh 32px 16vh;
+  max-width: 920px;
   margin: 0 auto;
 }
 
@@ -388,32 +397,46 @@ img {
   line-height: 1;
 }
 
-.feature-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+.feature-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: var(--stroke) solid var(--ink);
 }
 
 .feature-card {
-  border: var(--stroke) solid var(--ink);
-  padding: 22px 20px 20px;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 20px 28px;
+  padding: 32px 0 34px;
+  border-bottom: var(--stroke) solid var(--ink);
   background: var(--paper);
 }
 
+.feature-index {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--ink54);
+  padding-top: 4px;
+}
+
 .feature-card h3 {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   font-size: 13px;
   font-weight: 900;
-  letter-spacing: 1.6px;
+  letter-spacing: 1.8px;
 }
 
 .feature-card p {
   margin: 0;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  line-height: 1.45;
-  color: var(--ink54);
+  max-width: 58ch;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.55;
+  text-transform: none;
+  color: var(--ink);
 }
 
 .site-footer {
@@ -434,21 +457,24 @@ img {
 }
 
 @media (max-width: 860px) {
-  .chapter,
-  .chapter-words {
+  .chapter {
     height: 170vh;
+  }
+
+  .chapter-words {
+    height: 230vh;
   }
 
   .chapter-frost {
     height: 210vh;
   }
 
-  .pill {
-    --h: clamp(72px, 22vw, 140px);
+  .hero {
+    padding: var(--header-h) 20px 0;
   }
 
-  .display {
-    white-space: normal;
+  .hero-lockup {
+    gap: 12px;
   }
 
   .word {
@@ -467,8 +493,10 @@ img {
     transform: none;
   }
 
-  .feature-grid {
-    grid-template-columns: 1fr;
+  .feature-card {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 12px 16px;
+    padding: 24px 0 26px;
   }
 
   .shots-static {
@@ -490,8 +518,8 @@ img {
     padding: 8px;
   }
 
-  .pill {
-    --h: clamp(64px, 26vw, 110px);
+  .hero {
+    padding: var(--header-h) 16px 0;
   }
 
   .frost .shots {
@@ -518,7 +546,8 @@ img {
   }
 
   #wordCulture,
-  #wordArchive {
+  #wordArchive,
+  #wordStars {
     opacity: 1;
     transform: none;
   }

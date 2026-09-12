@@ -14,9 +14,9 @@ function stickyProgress(section) {
 }
 
 function burstScale(t) {
-  if (t <= 0) return 0.42;
-  if (t < 0.34) return 0.42 + 0.7 * easeOutCubic(t / 0.34);
-  if (t < 0.5) return 1.12 - 0.12 * easeInOut((t - 0.34) / 0.16);
+  if (t <= 0) return 0.92;
+  if (t < 0.34) return 0.92 + 0.12 * easeOutCubic(t / 0.34);
+  if (t < 0.5) return 1.04 - 0.04 * easeInOut((t - 0.34) / 0.16);
   return 1;
 }
 
@@ -32,6 +32,7 @@ const comingSoon = document.getElementById("comingSoon");
 const frost = document.getElementById("frostShots");
 const wordCulture = document.getElementById("wordCulture");
 const wordArchive = document.getElementById("wordArchive");
+const wordStars = document.getElementById("wordStars");
 const chapterHero = document.querySelector("[data-chapter='hero']");
 const chapterFrost = document.querySelector("[data-chapter='frost']");
 const chapterWords = document.querySelector("[data-chapter='words']");
@@ -63,14 +64,23 @@ function tick() {
   const words = stickyProgress(chapterWords);
   let culture = 0;
   let archive = 0;
-  if (words < 0.42) culture = easeInOutCubic(words / 0.42);
-  else if (words < 0.56) culture = 1 - easeInOutCubic((words - 0.42) / 0.14);
-  if (words >= 0.5) archive = easeInOutCubic(clamp01((words - 0.5) / 0.32));
+  let stars = 0;
+  if (words < 0.34) {
+    culture = words < 0.2 ? easeInOutCubic(words / 0.2) : 1 - easeInOutCubic((words - 0.2) / 0.14);
+  }
+  if (words >= 0.3 && words < 0.66) {
+    if (words < 0.42) archive = easeInOutCubic((words - 0.3) / 0.12);
+    else if (words < 0.52) archive = 1;
+    else archive = 1 - easeInOutCubic((words - 0.52) / 0.14);
+  }
+  if (words >= 0.62) stars = easeInOutCubic(clamp01((words - 0.62) / 0.16));
 
   wordCulture.style.opacity = String(culture);
   wordCulture.style.transform = `translate(calc(-50% + ${(1 - culture) * -42}vw), -50%)`;
   wordArchive.style.opacity = String(archive);
   wordArchive.style.transform = `translate(calc(-50% + ${(1 - archive) * 42}vw), -50%)`;
+  wordStars.style.opacity = String(stars);
+  wordStars.style.transform = `translate(calc(-50% + ${(1 - stars) * -42}vw), -50%)`;
 }
 
 let raf = 0;
