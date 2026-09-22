@@ -2531,8 +2531,9 @@ img {
 .footer-contact {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
+  text-align: center;
 }
 
 .footer-contact .kicker {
@@ -2547,7 +2548,7 @@ img {
   letter-spacing: 0.08em;
   line-height: 1.2;
   text-transform: none;
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -2695,7 +2696,7 @@ img {
   }
 
   .footer-contact {
-    align-items: flex-start;
+    align-items: center;
   }
 
   .footer-contact .kicker {
