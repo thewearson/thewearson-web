@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "H93S6V7APP.com.thewearson.theWearsOn",
+        "paths": ["/fit/*", "/f/*", "/fit.html"],
+        "appIDs": ["H93S6V7APP.com.thewearson.theWearsOn"],
+        "components": [
+          { "/": "/fit/*" },
+          { "/": "/f/*" },
+          { "/": "/fit.html*" }
+        ]
+      }
+    ]
+  }
+}

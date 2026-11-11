@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FIT — THE WEARS ON</title>
+  <meta name="description" content="Open this fit in THE WEARS ON.">
+  <meta property="og:title" content="THE WEARS ON">
+  <meta property="og:description" content="Open this fit in the app.">
+  <link rel="stylesheet" href="/style.css?v=house36">
+  <style>
+    body.is-fit { min-height: 100dvh; }
+    .fit-open {
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 96px 24px 48px;
+    }
+    .fit-card {
+      width: min(420px, 100%);
+      border: var(--stroke) solid var(--ink);
+      background: var(--paper);
+      padding: 36px 24px;
+      text-align: center;
+    }
+    .fit-card .kicker {
+      font-weight: 900;
+      letter-spacing: 4px;
+      font-size: 11px;
+      margin: 0 0 20px;
+    }
+    .fit-card h1 {
+      font-family: var(--display);
+      font-weight: 900;
+      letter-spacing: 3px;
+      font-size: 22px;
+      margin: 0 0 12px;
+    }
+    .fit-card p {
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--ink54);
+      line-height: 1.5;
+      margin: 0 0 28px;
+    }
+    .fit-open-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 56px;
+      background: var(--ink);
+      color: var(--paper);
+      font-weight: 900;
+      font-size: 12px;
+      letter-spacing: 3px;
+      border: var(--stroke) solid var(--ink);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body class="is-fit">
+  <header class="site-header">
+    <div class="header-box">
+      <span class="header-icon" aria-hidden="true"></span>
+      <a class="header-logo" href="/" aria-label="THE WEARS ON">
+        <img src="/logo_light.png" alt="THE WEARS ON">
+      </a>
+      <span class="header-icon" aria-hidden="true"></span>
+    </div>
+  </header>
+  <main class="fit-open">
+    <div class="fit-card">
+      <p class="kicker">THE WEARS ON</p>
+      <h1>OPEN FIT</h1>
+      <p>THIS POST OPENS IN THE APP.</p>
+      <a class="fit-open-btn" id="openApp" href="thewearson://">OPEN IN APP</a>
+    </div>
+  </main>
+  <script>
+    (function () {
+      function fitId() {
+        var q = new URLSearchParams(location.search).get('id');
+        if (q && q.trim()) return q.trim();
+        var parts = location.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
+        var i = parts.findIndex(function (p) { return p === 'fit' || p === 'f'; });
+        if (i >= 0 && parts[i + 1]) return decodeURIComponent(parts[i + 1]);
+        return '';
+      }
+      var id = fitId();
+      var app = id ? ('thewearson://fit/' + encodeURIComponent(id)) : 'thewearson://';
+      var btn = document.getElementById('openApp');
+      btn.href = app;
+      if (!id) return;
+      var iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = app;
+      document.body.appendChild(iframe);
+      window.location.replace(app);
+    })();
+  </script>
+</body>
+</html>
