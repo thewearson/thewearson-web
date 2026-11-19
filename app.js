@@ -1482,7 +1482,7 @@
                 <img src="shots/src/ig-rocky.jpg" alt="">
                 <div><strong>A$AP ROCKY</strong><em>${esc(t("following"))}</em></div>
               </div>
-              <div class="feat-ping"><span>${esc(t("joinPing"))}</span><b>2M</b></div>
+              <div class="feat-ping"><span>${esc(t("joinPing"))}</span><b>2M AGO</b></div>
             </div>
           </div>
         </li>
