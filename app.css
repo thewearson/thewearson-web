@@ -615,19 +615,111 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
 }
 .feed-more:hover { color: var(--ink); opacity: 1; }
 .feed-more svg { width: 22px; height: 22px; }
-.act.is-heart.on { color: var(--heart); }
-.act.is-heart.on svg { fill: var(--heart); }
+.act.is-heart.on { color: var(--ink); background: transparent; }
+.act.is-heart.on b { color: var(--ink); }
+.act.is-heart.on svg {
+  fill: var(--heart);
+  animation: heart-pop 0.42s var(--ease);
+}
 .act:hover { opacity: 0.5; }
-.actions .act:hover {
+.actions .act:hover,
+.actions .act:active,
+.actions .act:focus-visible {
   opacity: 1;
   background: var(--ink);
   color: var(--paper);
 }
-.actions .act.is-heart.on:hover {
-  background: var(--heart);
+.actions .act:hover b,
+.actions .act:active b,
+.actions .act:focus-visible b { color: var(--paper); }
+.actions .act:hover svg,
+.actions .act:active svg,
+.actions .act:focus-visible svg { fill: currentColor; }
+.actions .act.is-heart.on:hover,
+.actions .act.is-heart.on:active,
+.actions .act.is-heart.on:focus-visible {
+  background: var(--ink);
   color: var(--paper);
 }
-.act.is-heart.on:hover { opacity: 1; }
+.actions .act.is-heart.on:hover svg,
+.actions .act.is-heart.on:active svg,
+.actions .act.is-heart.on:focus-visible svg { fill: var(--heart); }
+@keyframes heart-pop {
+  0% { transform: scale(0.72); }
+  45% { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+
+.photo .burst {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+}
+.burst-plate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.burst-glyph {
+  width: 52px;
+  height: 52px;
+  fill: var(--heart);
+  display: block;
+}
+.burst-pill {
+  --h: 16px;
+  --aspect: 1.990196;
+  --pad: calc(var(--h) * 12 / 102);
+  --knob: calc(var(--h) - var(--pad) * 2);
+  --travel: calc(var(--h) * var(--aspect) - var(--pad) * 2 - var(--knob));
+  position: relative;
+  width: calc(var(--h) * var(--aspect));
+  height: var(--h);
+  background: var(--ink);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.burst-knob {
+  position: absolute;
+  top: var(--pad);
+  left: var(--pad);
+  width: var(--knob);
+  height: var(--knob);
+  background: var(--paper);
+  border-radius: 50%;
+}
+.photo.is-like-burst .burst-like {
+  animation: wears-burst 0.72s cubic-bezier(0.22, 1, 0.36, 1) 1 forwards;
+}
+.photo.is-like-burst .burst-like .burst-knob {
+  animation: wears-burst-pill 0.72s cubic-bezier(0.65, 0, 0.35, 1) 1 forwards;
+}
+@keyframes wears-burst {
+  0% { opacity: 0; transform: scale(0.42); }
+  16% { opacity: 1; transform: scale(1.12); }
+  34% { opacity: 1; transform: scale(1); }
+  70% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+@keyframes wears-burst-pill {
+  0% { left: var(--pad); }
+  22%, 100% { left: calc(var(--pad) + var(--travel)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .act.is-heart.on svg { animation: none; }
+  .photo.is-like-burst .burst-like,
+  .photo.is-like-burst .burst-like .burst-knob { animation: none; }
+}
 
 .feed-archive { margin-top: 32px; min-width: 0; }
 .feed-archive-h {

@@ -92,6 +92,7 @@
       confirm: "CHECK YOUR EMAIL TO CONFIRM THE ACCOUNT.",
       inUse: "THIS EMAIL IS ALREADY REGISTERED.",
       nickTaken: "THAT NICKNAME IS TAKEN.", nickInvalid: "3–18 LETTERS OR NUMBERS.",
+      nickFail: "NICKNAME COULD NOT BE SAVED.",
       authTitle: "LOGIN REQUIRED",
       authLike: "LIKE THIS FIT YOU NEED TO BE LOGGED IN.\n\nJOIN THE WEARS ON COMMUNITY, REFLECT YOUR STYLE AND BUILD YOUR ARCHIVE.",
       authComment: "JOIN THE CONVERSATION YOU NEED TO BE LOGGED IN.\n\nJOIN THE WEARS ON COMMUNITY, REFLECT YOUR STYLE AND BUILD YOUR ARCHIVE.",
@@ -168,6 +169,7 @@
       confirm: "HESABI ONAYLAMAK İÇİN E-POSTANIZI KONTROL EDİN.",
       inUse: "BU E-POSTA ZATEN KAYITLI.",
       nickTaken: "BU NICKNAME ALINMIŞ.", nickInvalid: "3–18 HARF VEYA RAKAM.",
+      nickFail: "NICKNAME KAYDEDİLEMEDİ.",
       authTitle: "GİRİŞ GEREKLİ",
       authLike: "BU FIT’İ BEĞENMEK İÇİN GİRİŞ YAPMANIZ GEREKİYOR.\n\nTHE WEARS ON TOPLULUĞUNA KATILIN, TARZINIZI YANSITIN, ARŞİVİNİZİ KURUN.",
       authComment: "SOHBETE KATILMAK İÇİN GİRİŞ YAPMANIZ GEREKİYOR.\n\nTHE WEARS ON TOPLULUĞUNA KATILIN, TARZINIZI YANSITIN, ARŞİVİNİZİ KURUN.",
@@ -327,6 +329,49 @@
     return s.replace(/[^A-Z0-9]/g, "");
   }
   const nickOk = (n) => /^[A-Z0-9]{3,18}$/.test(n);
+  function emailNick(user) {
+    return nickOf(String(user?.email || "").split("@")[0]);
+  }
+  function metaNick(user) {
+    const m = user?.user_metadata || {};
+    return nickOf(m.username || m.preferred_username || "");
+  }
+  function nickLooksGenerated(n, user) {
+    const s = nickOf(n);
+    if (!s || s === "MEMBER" || /^MEM\d+$/.test(s)) return true;
+    if (/^M[A-F0-9]{10,}$/.test(s)) return true;
+    const em = emailNick(user);
+    return em.length >= 3 && s === em;
+  }
+  function pendingNick() {
+    try { return nickOf(localStorage.getItem("tw.nick") || ""); } catch { return ""; }
+  }
+  function stashNick(n) {
+    const nick = nickOf(n);
+    if (!nickOk(nick)) return;
+    try { localStorage.setItem("tw.nick", nick); } catch {}
+  }
+  function clearStashedNick() {
+    try { localStorage.removeItem("tw.nick"); } catch {}
+  }
+  function pickNick(row, user, explicit) {
+    const want = nickOf(explicit || "");
+    if (nickOk(want) && !nickLooksGenerated(want, user)) return want;
+    const pending = pendingNick();
+    if (nickOk(pending) && !nickLooksGenerated(pending, user)) return pending;
+    const fromMeta = metaNick(user);
+    if (nickOk(fromMeta) && !nickLooksGenerated(fromMeta, user)) return fromMeta;
+    const fromRow = nickOf(row?.username || "");
+    if (nickOk(fromRow) && !nickLooksGenerated(fromRow, user)) return fromRow;
+    if (nickOk(want)) return want;
+    if (nickOk(pending)) return pending;
+    if (nickOk(fromMeta)) return fromMeta;
+    return "";
+  }
+  function isUniqueErr(e) {
+    const s = `${e?.message || ""} ${e?.body || ""}`.toLowerCase();
+    return s.includes("23505") || s.includes("duplicate") || s.includes("unique") || s.includes(":409") || s.includes("already exists");
+  }
 
   function money(n) {
     if (n == null || n === "") return "—";
@@ -512,12 +557,12 @@
       }),
       body: opt.body ? JSON.stringify(opt.body) : undefined,
     });
+    const text = await r.text();
     if (r.status === 401 && state.session) {
       const ok = await refreshSession();
       if (ok) return sb(table, qs, opt);
     }
-    if (!r.ok) throw new Error(`${table}:${r.status}`);
-    const text = await r.text();
+    if (!r.ok) throw Object.assign(new Error(`${table}:${r.status}`), { status: r.status, body: text });
     return text ? JSON.parse(text) : null;
   }
 
@@ -609,7 +654,7 @@
       state.me = {
         id: user.id,
         email: user.email || "",
-        username: nickOf(row.username || user.email?.split("@")[0] || ""),
+        username: pickNick(row, user),
         avatar: row.profile_image_url || "",
         isPublic: row.is_public !== false,
         isPremium: row.is_premium === true || row.is_premium === "true",
@@ -620,29 +665,81 @@
     }
   }
 
+  async function nickOwnedByOther(nick, exceptId) {
+    const n = nickOf(nick);
+    if (!nickOk(n)) return false;
+    const self = String(exceptId || "").toLowerCase();
+    const owned = (rows) => (rows || []).some((r) => {
+      if (nickOf(r.username) !== n) return false;
+      const id = String(r.id || "").toLowerCase();
+      return !self || id !== self;
+    });
+    try {
+      if (owned(await sb("wears_public_nicks", `select=id,username&username=eq.${encodeURIComponent(n)}`))) return true;
+    } catch { /* view may miss */ }
+    try {
+      if (owned(await sb("wears_public_nicks", `select=id,username&username=ilike.${encodeURIComponent(n)}`))) return true;
+    } catch { /* */ }
+    try {
+      if (owned(await sb("users", `select=id,username&username=eq.${encodeURIComponent(n)}`))) return true;
+    } catch { /* own-row RLS / recurse */ }
+    return false;
+  }
+
+  async function stampMetaNick(nick) {
+    const n = nickOf(nick);
+    if (!nickOk(n) || !logged()) return;
+    try {
+      await fetch(`${SB}/auth/v1/user`, {
+        method: "PUT",
+        headers: headers({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ data: { username: n } }),
+      });
+      if (state.session?.user) {
+        state.session.user.user_metadata = { ...(state.session.user.user_metadata || {}), username: n };
+      }
+    } catch { /* metadata is backup */ }
+  }
+
+  async function persistNick(raw) {
+    const nick = nickOf(raw);
+    const id = state.me?.id || state.session?.user?.id;
+    if (!id || !nickOk(nick)) return { ok: false, taken: false };
+    if (await nickOwnedByOther(nick, id)) return { ok: false, taken: true };
+    try {
+      await sb("users", `id=eq.${id}`, { method: "PATCH", body: { username: nick }, prefer: "return=minimal" });
+    } catch (e) {
+      if (isUniqueErr(e)) return { ok: false, taken: true };
+      try {
+        await sb("users", "on_conflict=id", { method: "POST", body: { id, username: nick }, prefer: "resolution=merge-duplicates,return=minimal" });
+      } catch (e2) {
+        if (isUniqueErr(e2)) return { ok: false, taken: true };
+        try {
+          await sb("users", "", { method: "POST", body: { id, username: nick }, prefer: "return=minimal" });
+        } catch (e3) {
+          if (isUniqueErr(e3)) return { ok: false, taken: true };
+          return { ok: false, taken: false };
+        }
+      }
+    }
+    if (state.me) state.me.username = nick;
+    await stampMetaNick(nick);
+    clearStashedNick();
+    return { ok: true, taken: false };
+  }
+
   async function ensureProfile(nick) {
     if (!logged()) return;
-    const id = state.me?.id || state.session?.user?.id;
-    if (!id) return;
-    const username = nickOf(nick || state.me?.username || state.session?.user?.user_metadata?.username || "");
-    const patch = username ? { username } : null;
-    if (patch) {
-      try {
-        await sb("users", `id=eq.${id}`, { method: "PATCH", body: patch, prefer: "return=minimal" });
-        if (state.me) state.me.username = username;
-        return;
-      } catch { /* insert */ }
-    }
-    try {
-      await sb("users", "", { method: "POST", body: username ? { id, username } : { id }, prefer: "return=minimal" });
-      if (state.me && username) state.me.username = username;
-    } catch { /* trigger may already have the row */ }
+    const username = pickNick(null, state.session?.user, nick);
+    if (!nickOk(username)) return;
+    await persistNick(username);
   }
 
   async function afterAuth(nick) {
+    if (nick) stashNick(nick);
     await hydrateMe();
     await ensureProfile(nick);
-    if (logged() && !state.me) await hydrateMe();
+    await hydrateMe();
   }
 
   async function pullMyLikes() {
@@ -1226,7 +1323,7 @@
   function carousel(urls, alt, likeId) {
     if (!urls.length) return `<div class="photo"></div>`;
     const slides = urls.map((u, i) => imgTag(u, alt, `data-i="${i}"${i ? " hidden" : ' fetchpriority="high"'}`)).join("");
-    return `<div class="photo" data-car="${urls.length}"${likeId ? ` data-dblike="${esc(likeId)}"` : ""}>${slides}${carouselNav(urls.length)}</div>`;
+    return `<div class="photo" data-car="${urls.length}"${likeId ? ` data-dblike="${esc(likeId)}"` : ""}>${slides}${carouselNav(urls.length)}${likeId ? `<div class="burst burst-like" aria-hidden="true"><div class="burst-plate">${I.heart.replace("<svg", '<svg class="burst-glyph"')}<span class="burst-pill"><span class="burst-knob"></span></span></div></div>` : ""}</div>`;
   }
   function bindCarousel(root) {
     root.querySelectorAll("[data-car]").forEach((el) => {
@@ -1563,7 +1660,7 @@
             <input id="avatarFile" type="file" accept="image/*" hidden>
           </label>
           <button type="button" class="ig-handle" data-pick-photo>${t("changePhoto")}</button>
-          <h1><input class="nick-inline" maxlength="18" value="${esc(me.username)}" data-nick-input aria-label="${t("editNick")}"></h1>
+          <h1><input class="nick-inline" maxlength="18" value="${esc(me.username)}" placeholder="${esc(t("nick"))}" data-nick-input aria-label="${t("editNick")}"></h1>
         </div>
       </article>
       <div class="account-stats">
@@ -1994,12 +2091,23 @@
     if ($("[data-comment-form]")?.dataset.commentForm === id) paintComments(id);
   }
 
+  function playLikeBurst(id) {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const photo = document.querySelector(`[data-dblike="${CSS.escape(id)}"]`);
+    if (!photo) return;
+    photo.classList.remove("is-like-burst");
+    void photo.offsetWidth;
+    photo.classList.add("is-like-burst");
+    window.setTimeout(() => photo.classList.remove("is-like-burst"), 900);
+  }
+
   async function toggleLike(id) {
     if (!logged()) { needAuth("like"); return; }
     const on = !state.liked.has(id);
     if (on) state.liked.add(id); else state.liked.delete(id);
     state.likeCounts[id] = Math.max(0, (state.likeCounts[id] || 0) + (on ? 1 : -1));
     render();
+    if (on) playLikeBurst(id);
     try {
       if (on) await sb("user_liked_outfits", "", { method: "POST", body: { user_id: state.me.id, outfit_id: id }, prefer: "return=minimal" });
       else await sb("user_liked_outfits", `user_id=eq.${state.me.id}&outfit_id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
@@ -2080,26 +2188,18 @@
     }
   }
 
-  async function nickTaken(nick, exceptId) {
-    try {
-      const rows = await sb("wears_public_nicks", `select=id,username&username=eq.${encodeURIComponent(nick)}`);
-      return (rows || []).some((r) => nickOf(r.username) === nick && r.id !== exceptId);
-    } catch {
-      return false;
-    }
-  }
-
   async function saveNick(raw) {
-    if (!logged()) return;
+    if (!logged() || !state.me) return;
     const nick = nickOf(raw);
+    if (!nick) return;
     if (!nickOk(nick)) { errorDlg(t("nickInvalid")); render(); return; }
-    if (nick === state.me.username) return;
-    if (await nickTaken(nick, state.me.id)) { errorDlg(t("nickTaken")); render(); return; }
-    try {
-      await sb("users", `id=eq.${state.me.id}`, { method: "PATCH", body: { username: nick }, prefer: "return=minimal" });
-      state.me.username = nick;
-    } catch {
-      errorDlg(t("nickTaken"));
+    if (nick === nickOf(state.me.username)) return;
+    stashNick(nick);
+    const out = await persistNick(nick);
+    if (!out.ok) {
+      await hydrateMe();
+      if (nickOf(state.me?.username) === nick) { render(); return; }
+      errorDlg(out.taken ? t("nickTaken") : t("nickFail"));
     }
     render();
   }
@@ -2107,7 +2207,7 @@
   async function signUp(email, password, username) {
     const nick = nickOf(username);
     if (!nickOk(nick)) { errorDlg(t("nickInvalid")); return; }
-    if (await nickTaken(nick)) { errorDlg(t("nickTaken")); return; }
+    if (await nickOwnedByOther(nick)) { errorDlg(t("nickTaken")); return; }
     state.busy = true; state.authErr = ""; render();
     try {
       const data = await auth("signup", { email: email.trim(), password, data: { username: nick } });
@@ -2126,6 +2226,7 @@
           state.busy = false; render(); return;
         }
       }
+      stashNick(nick);
       await afterAuth(nick);
       if (logged()) state.region = state.contentRegion;
       state.busy = false;
@@ -2340,6 +2441,8 @@
   }
   function render() {
     const view = $("#view");
+    const nickEl = document.activeElement?.hasAttribute?.("data-nick-input") ? document.activeElement : null;
+    const nickDraft = nickEl ? nickEl.value : null;
     const { path, id } = hash();
     const routeKey = `${path}/${id}`;
     const routeChanged = routeKey !== lastRoute;
@@ -2361,6 +2464,15 @@
     else if (path === "b") html = brandPage(id);
     else html = home();
     view.innerHTML = html;
+    if (nickDraft != null) {
+      const el = view.querySelector("[data-nick-input]");
+      if (el) {
+        el.value = nickDraft;
+        el.focus();
+        const end = el.value.length;
+        try { el.setSelectionRange(end, end); } catch {}
+      }
+    }
     if (routeChanged) window.scrollTo(0, 0);
     if ((routeChanged && state.ready) || readyFlip) enterView(view);
     else view.classList.remove("is-enter");
@@ -2555,7 +2667,7 @@
 
   document.addEventListener("focusout", (e) => {
     const input = e.target.closest?.("[data-nick-input]");
-    if (input) saveNick(input.value);
+    if (input && input.isConnected) saveNick(input.value);
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && e.target.closest?.("[data-nick-input]")) {
