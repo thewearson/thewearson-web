@@ -25,6 +25,7 @@
     apple: svg("M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"),
     google: svg("M21.35 11.1h-9.17v2.98h5.3c-.23 1.25-1.4 3.66-5.3 3.66A6.1 6.1 0 1 1 12.18 6c1.74 0 2.91.74 3.58 1.38l2.44-2.36C16.54 3.5 14.56 2.5 12.18 2.5 6.92 2.5 2.7 6.72 2.7 12s4.22 9.5 9.48 9.5c5.47 0 9.08-3.84 9.08-9.24 0-.62-.07-1.09-.16-1.56z"),
     cam: svg("M12 12m-3.2 0a3.2 3.2 0 1 1 6.4 0 3.2 3.2 0 1 1-6.4 0M9 2 7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9z"),
+    bell: svg("M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zM16 17H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"),
     check: svg("M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"),
     fwd: svg("M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"),
     close: svg("M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"),
@@ -78,7 +79,6 @@
       joinFollow: "PROFILE", joinFollowD: "OPEN A PLATE. SET THE NAME. PIN WHAT YOU WEAR.",
       joinArchive: "FOLLOW", joinArchiveD: "FOLLOW ARTISTS. GET A PING WHEN THEY DROP A FIT.",
       joinCulture: "SAVE", joinCultureD: "SAVE FITS. STOCK ALERTS WHEN A PIECE MOVES.",
-      joinPing: "NEW FIT", joinStock: "BACK IN STOCK",
       pieces: "PIECES",
       logIn: "LOG IN", create: "CREATE ACCOUNT", or: "OR",
       apple: "CONTINUE WITH APPLE", google: "CONTINUE WITH GOOGLE", guest: "CONTINUE AS GUEST",
@@ -155,7 +155,6 @@
       joinFollow: "PROFİL", joinFollowD: "PLAKA AÇ. İSİM KOY. GİYDİĞİNİ PIN’LE.",
       joinArchive: "TAKİP", joinArchiveD: "SANATÇILARI TAKİP ET. FIT ATINCA HABERİN OLSUN.",
       joinCulture: "KAYDET", joinCultureD: "FIT KAYDET. STOK VEYA FİYAT KAYINCA BİL.",
-      joinPing: "YENİ FIT", joinStock: "STOKTA",
       pieces: "PARÇA",
       logIn: "GİRİŞ YAP", create: "HESAP OLUŞTUR", or: "VEYA",
       apple: "APPLE İLE DEVAM ET", google: "GOOGLE İLE DEVAM ET", guest: "MİSAFİR OLARAK DEVAM ET",
@@ -1461,40 +1460,9 @@
       <h1 class="auth-display">${welcomeLines()}</h1>
       <p class="auth-lede">${t("joinDek")}</p>
       ${opt.back ? "" : `<ol class="auth-index">
-        <li>
-          <div class="feat-head"><b>01</b><div><em>${t("joinFollow")}</em><p>${t("joinFollowD")}</p></div></div>
-          <div class="feat-stage" aria-hidden="true">
-            <article class="feat-plate">
-              <header>${esc(t("plate"))}</header>
-              <div class="feat-plate-mid">
-                <span class="feat-ava"><img src="shots/src/miles.png" alt=""><i>${I.cam}</i></span>
-                <span class="feat-change">${esc(t("changePhoto"))}</span>
-                <strong>MILES</strong>
-              </div>
-            </article>
-          </div>
-        </li>
-        <li>
-          <div class="feat-head"><b>02</b><div><em>${t("joinArchive")}</em><p>${t("joinArchiveD")}</p></div></div>
-          <div class="feat-stage" aria-hidden="true">
-            <div class="feat-follow">
-              <div class="feat-star">
-                <img src="shots/src/ig-rocky.jpg" alt="">
-                <div><strong>A$AP ROCKY</strong><em>${esc(t("following"))}</em></div>
-              </div>
-              <div class="feat-ping"><span>${esc(t("joinPing"))}</span><b>2M AGO</b></div>
-            </div>
-          </div>
-        </li>
-        <li>
-          <div class="feat-head"><b>03</b><div><em>${t("joinCulture")}</em><p>${t("joinCultureD")}</p></div></div>
-          <div class="feat-stage" aria-hidden="true">
-            <div class="feat-save">
-              <div class="feat-fit"><img src="shots/src/loewe-hoodie.jpg" alt=""><i>${I.mark}</i></div>
-              <div class="feat-stock"><em>${esc(t("joinStock"))}</em><strong>LOEWE HOODIE</strong></div>
-            </div>
-          </div>
-        </li>
+        <li><span class="feat-ico">${I.personO}</span><div><em>${t("joinFollow")}</em><p>${t("joinFollowD")}</p></div></li>
+        <li><span class="feat-ico">${I.bell}</span><div><em>${t("joinArchive")}</em><p>${t("joinArchiveD")}</p></div></li>
+        <li><span class="feat-ico">${I.mark}</span><div><em>${t("joinCulture")}</em><p>${t("joinCultureD")}</p></div></li>
       </ol>`}
       <dl class="auth-stats">
         <div><dt>${t("artists")}</dt><dd>${String(nArt || 0).padStart(2, "0")}</dd></div>
