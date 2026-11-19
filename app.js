@@ -494,7 +494,15 @@
     return { apikey: KEY, Authorization: `Bearer ${token}`, ...extra };
   }
 
+  async function refreshIfNeeded() {
+    if (!state.session?.refresh_token) return;
+    const exp = Number(state.session.expires_at || 0);
+    if (exp && Date.now() < exp - 20000) return;
+    await refreshSession();
+  }
+
   async function sb(table, qs, opt = {}) {
+    await refreshIfNeeded();
     const r = await fetch(`${SB}/rest/v1/${table}?${qs}`, {
       method: opt.method || "GET",
       headers: headers({
@@ -535,10 +543,21 @@
 
   function saveSession(sess) {
     if (!sess || !sess.access_token) { clearSession(); return; }
-    const expires = Date.now() + (Number(sess.expires_in || 3600) * 1000);
-    state.session = { access_token: sess.access_token, refresh_token: sess.refresh_token, expires_at: expires, user: sess.user || state.session?.user };
-    if (state.remember) localStorage.setItem("tw.session", JSON.stringify(state.session));
-    else sessionStorage.setItem("tw.session", JSON.stringify(state.session));
+    const at = Number(sess.expires_at);
+    const inn = Number(sess.expires_in);
+    let expires = Date.now() + 3600 * 1000;
+    if (at > 1e12) expires = at;
+    else if (at > 1e9) expires = at * 1000;
+    else if (inn > 0 && inn < 1e7) expires = Date.now() + inn * 1000;
+    state.session = {
+      access_token: sess.access_token,
+      refresh_token: sess.refresh_token || state.session?.refresh_token,
+      expires_at: expires,
+      user: sess.user || state.session?.user,
+    };
+    const raw = JSON.stringify(state.session);
+    if (state.remember) localStorage.setItem("tw.session", raw);
+    else sessionStorage.setItem("tw.session", raw);
   }
   function clearSession() {
     state.session = null;
@@ -570,6 +589,7 @@
   async function hydrateMe() {
     if (!logged()) return;
     try {
+      await refreshIfNeeded();
       const r = await fetch(`${SB}/auth/v1/user`, { headers: headers() });
       if (!r.ok) throw new Error("user");
       const user = await r.json();
@@ -597,6 +617,31 @@
     } catch {
       /* keep token; catalog still works */
     }
+  }
+
+  async function ensureProfile(nick) {
+    if (!logged()) return;
+    const id = state.me?.id || state.session?.user?.id;
+    if (!id) return;
+    const username = nickOf(nick || state.me?.username || state.session?.user?.user_metadata?.username || "");
+    const patch = username ? { username } : null;
+    if (patch) {
+      try {
+        await sb("users", `id=eq.${id}`, { method: "PATCH", body: patch, prefer: "return=minimal" });
+        if (state.me) state.me.username = username;
+        return;
+      } catch { /* insert */ }
+    }
+    try {
+      await sb("users", "", { method: "POST", body: username ? { id, username } : { id }, prefer: "return=minimal" });
+      if (state.me && username) state.me.username = username;
+    } catch { /* trigger may already have the row */ }
+  }
+
+  async function afterAuth(nick) {
+    await hydrateMe();
+    await ensureProfile(nick);
+    if (logged() && !state.me) await hydrateMe();
   }
 
   async function pullMyLikes() {
@@ -2022,7 +2067,7 @@
     try {
       const data = await auth("token?grant_type=password", { email: email.trim(), password });
       saveSession(data);
-      await hydrateMe();
+      await afterAuth();
       state.busy = false;
       go("#/");
     } catch (e) {
@@ -2063,7 +2108,7 @@
     if (await nickTaken(nick)) { errorDlg(t("nickTaken")); return; }
     state.busy = true; state.authErr = ""; render();
     try {
-      const data = await auth("signup", { email: email.trim(), password });
+      const data = await auth("signup", { email: email.trim(), password, data: { username: nick } });
       if (data.user && (!data.user.identities || data.user.identities.length === 0) && !data.session && !data.access_token) {
         state.authErr = t("inUse"); state.busy = false; render(); return;
       }
@@ -2079,16 +2124,8 @@
           state.busy = false; render(); return;
         }
       }
-      await hydrateMe();
-      if (logged()) {
-        try {
-          await sb("users", `id=eq.${state.me.id}`, { method: "PATCH", body: { username: nick }, prefer: "return=minimal" });
-        } catch {
-          try { await sb("users", "", { method: "POST", body: { id: state.me.id, username: nick }, prefer: "return=minimal" }); } catch {}
-        }
-        state.me.username = nick;
-        state.region = state.contentRegion;
-      }
+      await afterAuth(nick);
+      if (logged()) state.region = state.contentRegion;
       state.busy = false;
       go(logged() ? "#/account" : "#/login");
       if (!logged()) state.authErr = t("confirm");
@@ -2109,43 +2146,69 @@
   async function startOAuth(provider) {
     const rand = crypto.getRandomValues(new Uint8Array(32));
     const verifier = btoa(String.fromCharCode(...rand)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    localStorage.setItem("tw.pkce", verifier);
     sessionStorage.setItem("tw.pkce", verifier);
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
     const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-    const redirect = `${location.origin}${location.pathname}`;
-    location.href = `${SB}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(redirect)}&code_challenge=${challenge}&code_challenge_method=S256&apikey=${KEY}`;
+    const redirect = `${location.origin}/`;
+    location.href = `${SB}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(redirect)}&code_challenge=${encodeURIComponent(challenge)}&code_challenge_method=S256`;
+  }
+
+  function stripAuthUrl() {
+    const url = new URL(location.href);
+    ["code", "error", "error_description", "error_code", "state"].forEach((k) => url.searchParams.delete(k));
+    const hash = url.hash || "";
+    if (hash.includes("access_token=") || hash.includes("error=")) url.hash = "";
+    history.replaceState({}, "", url.pathname + url.search + (url.hash.startsWith("#/") ? url.hash : ""));
   }
 
   async function finishOAuth() {
     const q = new URLSearchParams(location.search);
-    const code = q.get("code");
-    const hashBits = new URLSearchParams(location.hash.replace(/^#/, ""));
+    const rawHash = (location.hash || "").replace(/^#/, "");
+    const hashBits = rawHash.includes("access_token=") || rawHash.includes("refresh_token=") || rawHash.includes("error=")
+      ? new URLSearchParams(rawHash)
+      : new URLSearchParams();
+    const err = q.get("error_description") || q.get("error") || hashBits.get("error_description") || hashBits.get("error");
     const access = hashBits.get("access_token");
+    const code = q.get("code");
+    if (err && !access && !code) {
+      stripAuthUrl();
+      state.authErr = t("errAuth");
+      return "join";
+    }
     if (access) {
       saveSession({
         access_token: access,
         refresh_token: hashBits.get("refresh_token"),
         expires_in: hashBits.get("expires_in"),
+        expires_at: hashBits.get("expires_at"),
       });
-      history.replaceState({}, "", location.pathname);
-      await hydrateMe();
-      go(state.me?.username ? "#/" : "#/create");
-      return true;
+      stripAuthUrl();
+      await afterAuth();
+      return hashBits.get("type") === "recovery" ? "account" : "home";
     }
     if (code) {
-      const verifier = sessionStorage.getItem("tw.pkce") || "";
+      const verifier = localStorage.getItem("tw.pkce") || sessionStorage.getItem("tw.pkce") || "";
       try {
-        const data = await auth("token?grant_type=pkce", { auth_code: code, code_verifier: verifier });
+        let data;
+        try {
+          data = await auth("token?grant_type=pkce", { auth_code: code, code_verifier: verifier });
+        } catch {
+          data = await auth("token?grant_type=authorization_code", { code, code_verifier: verifier });
+        }
         saveSession(data);
-        history.replaceState({}, "", location.pathname);
-        await hydrateMe();
-        go("#/");
-        return true;
+        localStorage.removeItem("tw.pkce");
+        sessionStorage.removeItem("tw.pkce");
+        stripAuthUrl();
+        await afterAuth();
+        return "home";
       } catch {
-        history.replaceState({}, "", location.pathname);
+        stripAuthUrl();
+        state.authErr = t("errAuth");
+        return "join";
       }
     }
-    return false;
+    return "";
   }
 
   async function uploadAvatar(file) {
@@ -2475,7 +2538,7 @@
       e.preventDefault();
       const email = String(new FormData(reset).get("email") || "").trim();
       if (!email) return;
-      auth("recover", { email }).then(() => { hideSheet(); snack(t("forgotSent")); }).catch(() => snack(t("errAuth")));
+      auth(`recover?redirect_to=${encodeURIComponent(`${location.origin}/`)}`, { email }).then(() => { hideSheet(); snack(t("forgotSent")); }).catch(() => snack(t("errAuth")));
     }
   });
 
@@ -2501,10 +2564,14 @@
 
   (async () => {
     restoreSession();
-    const redirected = await finishOAuth();
-    if (logged() && !redirected) await hydrateMe();
+    await refreshIfNeeded();
+    const dest = await finishOAuth();
+    if (logged() && !dest) await afterAuth();
     paintChrome();
-    render();
+    if (dest === "join") go("#/join");
+    else if (dest === "account") go("#/account");
+    else if (dest === "home") go("#/");
+    else render();
     load();
   })();
 })();
