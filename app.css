@@ -2901,6 +2901,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
   max-width: 720px;
   margin: 0 auto;
   padding: 8px 16px 72px;
+  font-family: var(--display);
 }
 .set-page .back-row { padding: 0 0 16px; }
 .set-title {
@@ -2911,17 +2912,46 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
   font-size: 16px;
   font-weight: 900;
   letter-spacing: 2px;
+  text-transform: uppercase;
 }
 .sq.is-ghost { visibility: hidden; pointer-events: none; }
-.set-page .kicker { margin: 28px 0 12px; }
+.set-page .kicker {
+  margin: 32px 0 16px;
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: var(--ink54);
+}
+.set-page .back-row + .kicker { margin-top: 8px; }
 .set-hint {
   margin: 0 0 16px;
-  font-size: 9px;
-  font-weight: 700;
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 900;
   letter-spacing: 1px;
   color: var(--ink54);
 }
-.set-page .select-field { margin: 0 0 12px; }
+.set-page .select-field {
+  margin: 0 0 12px;
+  padding: 16px;
+  font-family: var(--display);
+}
+.set-page .select-field:hover { background: var(--ink); color: var(--paper); }
+.set-page .select-field em {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+}
+.set-page .select-field strong {
+  font-family: var(--display);
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: var(--ink54);
+}
 .set-row,
 .set-acc,
 .set-toggle {
@@ -2936,7 +2966,8 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
   color: inherit;
   text-align: left;
   text-decoration: none;
-  font: inherit;
+  font-family: var(--display);
+  font-weight: 900;
 }
 .set-row:hover,
 .set-acc:hover,
@@ -2945,25 +2976,50 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
 .set-row:hover strong,
 .set-toggle:hover em,
 .set-toggle:hover strong { color: var(--paper); }
+.set-page .select-field:hover strong { color: var(--paper); }
 .set-row span,
 .set-acc span,
 .set-toggle span { flex: 1; min-width: 0; }
-.set-row em,
-.set-toggle strong {
+.set-row span {
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+}
+.set-acc span {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+.set-row em {
   display: block;
   margin-top: 4px;
+  font-family: var(--display);
   font-style: normal;
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--ink54);
+  letter-spacing: 0.4px;
+  text-decoration: underline;
+  color: var(--ink);
 }
 .set-toggle em {
   display: block;
+  font-family: var(--display);
   font-style: normal;
   font-size: 13px;
   font-weight: 900;
   letter-spacing: 0.4px;
+}
+.set-toggle strong {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--display);
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--ink54);
 }
 .set-row svg:first-child,
 .set-acc svg:first-child { width: 20px; height: 20px; fill: currentColor; flex: none; }
