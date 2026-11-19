@@ -1783,9 +1783,12 @@
       for (const c of state.comments[id]) if (c.userId === me.id) mine.push(c);
     }
     const followed = [...state.followed];
-    return `
-      <article class="plate">
-        <header class="plate-head"><button class="plate-set" type="button" data-go="#/settings" aria-label="${t("settings")}">${I.gear}</button>${t("plate")}</header>
+    return `<div class="acc-page">
+      <article class="plate acc-plate">
+        <header class="plate-head">
+          <span class="plate-head-lbl">${t("plate")}</span>
+          <button class="plate-set" type="button" data-go="#/settings" aria-label="${t("settings")}">${I.gear}</button>
+        </header>
         <div class="plate-body">
           <label class="photo-edit">
             ${ava(me.avatar, me.username, "ava lg")}
@@ -1802,18 +1805,28 @@
         <div><em>${t("accComments")}</em><b>${mine.length}</b></div>
         <div><em>${t("accFollow")}</em><b>${followed.length}</b></div>
       </div>
-      <div class="pad" style="padding-top:0">
-        <button class="check ${me.isPublic ? "is-on" : ""}" type="button" data-public><i>${me.isPublic ? I.check : ""}</i> ${t("publicOn")}</button>
-        <p class="hint" style="margin:0 0 24px;font-size:9px;font-weight:700;letter-spacing:1px;color:var(--ink54)">${t("publicDesc")}</p>
+      <section class="acc-block">
+        <button class="set-toggle ${me.isPublic ? "is-on" : ""}" type="button" data-public>
+          <span><em>${t("publicOn")}</em><strong>${t("publicDesc")}</strong></span>
+          <i>${me.isPublic ? I.check : ""}</i>
+        </button>
+      </section>
+      <section class="acc-block">
         <p class="kicker">${t("accFollow")}</p>
-        ${followed.length ? followed.map((n) => {
-          const a = artistByName(n);
-          return `<button class="followed-row" type="button" data-go="#/s/${encodeURIComponent(n)}">${ava(a?.imageUrl, n, "ava")}<span>${esc(n)}</span></button>`;
-        }).join("") : `<p class="empty" style="padding:24px 0">${t("noFollow")}</p>`}
-        <p class="kicker" style="margin-top:28px">${t("accComments")}</p>
-        ${mine.length ? mine.slice(0, 8).map((c) => `<div class="comment">${ava(me.avatar, me.username)}<div><p>${esc(c.text)}</p><em>${esc(ago(c.at))}</em></div></div>`).join("") : `<p class="empty" style="padding:24px 0">${t("commentsEmpty")}</p>`}
-      </div>
-    `;
+        <div class="acc-list">
+          ${followed.length ? followed.map((n) => {
+            const a = artistByName(n);
+            return `<button class="followed-row" type="button" data-go="#/s/${encodeURIComponent(n)}">${ava(a?.imageUrl, n, "ava")}<span>${esc(n)}</span>${I.fwd}</button>`;
+          }).join("") : `<p class="empty">${t("noFollow")}</p>`}
+        </div>
+      </section>
+      <section class="acc-block">
+        <p class="kicker">${t("accComments")}</p>
+        <div class="acc-list">
+          ${mine.length ? mine.slice(0, 8).map((c) => `<div class="comment">${ava(me.avatar, me.username)}<div><p>${esc(c.text)}</p><em>${esc(ago(c.at))}</em></div></div>`).join("") : `<p class="empty">${t("commentsEmpty")}</p>`}
+        </div>
+      </section>
+    </div>`;
   }
 
   function settingsPage() {
@@ -2963,8 +2976,8 @@
       const current = pick === "country" ? state.country : pick === "region" ? state.contentRegion : (state.lang === "tr" ? "Türkçe" : "English");
       const title = pick === "country" ? t("country") : pick === "region" ? t("regionOpt") : t("lang");
       showSheet(`
-        <div class="sheet-head"><span></span><p>${esc(title)}</p><button type="button" data-close>${I.close}</button></div>
-        ${items.map((item) => `<button class="sheet-row" type="button" data-picked="${esc(pick)}" data-value="${esc(item)}" ${item === current ? 'style="background:#000;color:#fff"' : ""}>${esc(item).toUpperCase()}${item === current ? I.check : ""}</button>`).join("")}
+        <div class="sheet-head"><span></span><p>${esc(title)}</p><button type="button" data-close aria-label="${t("close")}">${I.close}</button></div>
+        <div class="sheet-list">${items.map((item) => `<button class="sheet-row ${item === current ? "is-on" : ""}" type="button" data-picked="${esc(pick)}" data-value="${esc(item)}"><span>${esc(item).toUpperCase()}</span>${item === current ? I.check : ""}</button>`).join("")}</div>
       `);
       return;
     }
@@ -2988,8 +3001,8 @@
     if (e.target.closest("[data-forgot]")) {
       e.preventDefault();
       showSheet(`
-        <p class="sheet-title">${t("forgot")}</p>
-        <form class="pad" data-reset>
+        <div class="sheet-head"><span></span><p>${t("forgot")}</p><button type="button" data-close aria-label="${t("close")}">${I.close}</button></div>
+        <form class="sheet-form" data-reset>
           <div class="field"><label>${t("email")}</label><input name="email" type="email"></div>
           <button class="cta is-fill" type="submit">${t("sendReset")}</button>
         </form>
@@ -2999,9 +3012,11 @@
     const more = e.target.closest("[data-more]")?.dataset.more;
     if (more) {
       showSheet(`
-        <p class="sheet-title">${esc(more)}</p>
-        <button class="sheet-row" type="button" data-go="#/s/${encodeURIComponent(more)}">${esc(more)}</button>
-        <button class="sheet-row" type="button" data-close>${state.lang === "tr" ? "KAPAT" : "CLOSE"}</button>
+        <div class="sheet-head"><span></span><p>${esc(more)}</p><button type="button" data-close aria-label="${t("close")}">${I.close}</button></div>
+        <div class="sheet-list">
+          <button class="sheet-row" type="button" data-go="#/s/${encodeURIComponent(more)}"><span>${esc(more)}</span>${I.fwd}</button>
+          <button class="sheet-row" type="button" data-close><span>${state.lang === "tr" ? "KAPAT" : "CLOSE"}</span></button>
+        </div>
       `);
     }
   });
