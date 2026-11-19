@@ -1898,7 +1898,6 @@
     if (!n) return `<p class="empty">${t("none")}</p>`;
     const dek = (n.dek || "").trim();
     const body = (n.body || "").trim();
-    const article = body || dek;
     const buy = n.buyUrl;
     const hasProduct = [n.productName, n.releaseDate, n.buyNote, n.sku].some((v) => v);
     const href = buy && !/^https?:\/\//i.test(buy) ? `https://${buy}` : buy;
@@ -1914,8 +1913,8 @@
         <div class="spec-row"><em>RELEASE DATE</em><span>${esc(n.releaseDate || "—")}</span></div>
         ${n.buyNote ? `<div class="spec-row"><em>NOTE</em><span>${esc(n.buyNote)}</span></div>` : ""}
       </div>` : ""}
-      ${dek && body ? `<p class="dek-lead">${esc(dek)}</p>` : ""}
-      ${article ? `<p class="body">${esc(article)}</p>` : ""}
+      ${dek ? `<p class="dek-lead">${esc(dek)}</p>` : ""}
+      ${body ? `<p class="body">${esc(body)}</p>` : ""}
       <div class="news-tools">
         ${hypeBox(n.id)}
         ${href ? `<a class="buy-bar" href="${esc(href)}" target="_blank" rel="noopener" data-visit>${t("buy")}</a>` : ""}
