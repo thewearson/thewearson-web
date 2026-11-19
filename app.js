@@ -19,6 +19,9 @@
     heartO: svg("M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3zm-4.4 15.55l-.1.1-.1-.1C7.14 14.24 4 11.39 4 8.5 4 6.5 5.5 5 7.5 5c1.54 0 3.04.99 3.57 2.36h1.87C13.46 5.99 14.96 5 16.5 5c2 0 3.5 1.5 3.5 3.5 0 2.89-3.14 5.74-7.9 10.05z"),
     chat: svg("M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"),
     mark: svg("M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z"),
+    markO: svg("M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2zm0 16-5-2.18L7 19V5h10v14z"),
+    gear: svg("M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"),
+    out: svg("M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"),
     more: svg("M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"),
     lock: svg("M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10z"),
     key: svg("M12.65 10A5.99 5.99 0 0 0 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6a5.99 5.99 0 0 0 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"),
@@ -95,6 +98,19 @@
       nickFail: "NICKNAME COULD NOT BE SAVED.",
       authTitle: "LOGIN REQUIRED",
       authLike: "LIKE THIS FIT YOU NEED TO BE LOGGED IN.\n\nJOIN THE WEARS ON COMMUNITY, REFLECT YOUR STYLE AND BUILD YOUR ARCHIVE.",
+      authSave: "SAVE THIS FIT YOU NEED TO BE LOGGED IN.\n\nJOIN THE WEARS ON COMMUNITY, REFLECT YOUR STYLE AND BUILD YOUR ARCHIVE.",
+      savedMsg: "FIT SAVED.", removedMsg: "FIT REMOVED.", savedEmpty: "NO SAVED FITS.",
+      savedHint: "PRIVATE TO THIS ACCOUNT.",
+      setPref: "PREFERENCES", setPrivacy: "PRIVACY", setHelp: "HELP", setAccount: "ACCOUNT SETTINGS",
+      setRegion: "CONTENT REGION", setPublic: "PUBLIC PROFILE",
+      setPr: "PR / PARTNERSHIPS", setHc: "HELP CENTER",
+      accGuest: "LOG IN TO MANAGE YOUR ACCOUNT",
+      accDeactivate: "DEACTIVATE ACCOUNT",
+      accDeactivateD: "THIS PERMANENTLY DELETES YOUR ACCOUNT. YOU CAN SIGN UP AGAIN WITH THE SAME EMAIL, USERNAME, APPLE, OR GOOGLE.",
+      accDeactivated: "ACCOUNT DEACTIVATED.",
+      verifyTitle: "VERIFICATION", verifyDesc: "ENTER THE CODE WE SENT TO YOUR EMAIL.",
+      verifyHint: "000000", verifyBtn: "VERIFY", verifyResend: "RESEND CODE",
+      verifyFail: "THAT CODE IS WRONG OR EXPIRED.",
       authComment: "JOIN THE CONVERSATION YOU NEED TO BE LOGGED IN.\n\nJOIN THE WEARS ON COMMUNITY, REFLECT YOUR STYLE AND BUILD YOUR ARCHIVE.",
       authFollow: "FOLLOW THIS ARTIST YOU NEED TO BE LOGGED IN.\n\nJOIN THE WEARS ON COMMUNITY, REFLECT YOUR STYLE AND BUILD YOUR ARCHIVE.",
       authJoin: "LOG IN / JOIN", cancel: "CANCEL", okay: "OKAY",
@@ -172,6 +188,19 @@
       nickFail: "NICKNAME KAYDEDİLEMEDİ.",
       authTitle: "GİRİŞ GEREKLİ",
       authLike: "BU FIT’İ BEĞENMEK İÇİN GİRİŞ YAPMANIZ GEREKİYOR.\n\nTHE WEARS ON TOPLULUĞUNA KATILIN, TARZINIZI YANSITIN, ARŞİVİNİZİ KURUN.",
+      authSave: "BU FIT’İ KAYDETMEK İÇİN GİRİŞ YAPMANIZ GEREKİYOR.\n\nTHE WEARS ON TOPLULUĞUNA KATILIN, TARZINIZI YANSITIN, ARŞİVİNİZİ KURUN.",
+      savedMsg: "FIT KAYDEDİLDİ.", removedMsg: "FIT KALDIRILDI.", savedEmpty: "KAYITLI FIT YOK.",
+      savedHint: "BU HESABA ÖZEL.",
+      setPref: "TERCİHLER", setPrivacy: "GİZLİLİK", setHelp: "YARDIM", setAccount: "HESAP AYARLARI",
+      setRegion: "İÇERİK BÖLGESİ", setPublic: "HERKESE AÇIK PROFİL",
+      setPr: "PR / İŞ BİRLİĞİ", setHc: "DESTEK",
+      accGuest: "HESABINI YÖNETMEK İÇİN GİRİŞ YAP",
+      accDeactivate: "HESABI DEAKTİVE ET",
+      accDeactivateD: "BU HESABI KALICI OLARAK SİLER. AYNI E-POSTA, USERNAME, APPLE VEYA GOOGLE İLE YENİDEN ÜYE OLABİLİRSİN.",
+      accDeactivated: "HESAP DEAKTİVE EDİLDİ.",
+      verifyTitle: "DOĞRULAMA", verifyDesc: "E-POSTANA GÖNDERDİĞİMİZ KODU GİR.",
+      verifyHint: "000000", verifyBtn: "DOĞRULA", verifyResend: "KODU YENİDEN GÖNDER",
+      verifyFail: "KOD YANLIŞ VEYA SÜRESİ DOLMUŞ.",
       authComment: "SOHBETE KATILMAK İÇİN GİRİŞ YAPMANIZ GEREKİYOR.\n\nTHE WEARS ON TOPLULUĞUNA KATILIN, TARZINIZI YANSITIN, ARŞİVİNİZİ KURUN.",
       authFollow: "BU SANATÇIYI TAKİP ETMEK İÇİN GİRİŞ YAPMANIZ GEREKİYOR.\n\nTHE WEARS ON TOPLULUĞUNA KATILIN, TARZINIZI YANSITIN, ARŞİVİNİZİ KURUN.",
       authJoin: "GİRİŞ / ÜYE OL", cancel: "İPTAL", okay: "TAMAM",
@@ -300,6 +329,7 @@
     session: null,
     me: null,
     liked: new Set(),
+    saved: new Set(),
     followed: new Set(),
     likeCounts: {},
     comments: {},
@@ -308,6 +338,8 @@
     remember: true,
     authErr: "",
     busy: false,
+    verifyEmail: sessionStorage.getItem("tw.verifyEmail") || "",
+    verifyKind: sessionStorage.getItem("tw.verifyKind") || "signup",
     country: localStorage.getItem("tw.country") || "United States",
     contentRegion: localStorage.getItem("tw.contentRegion") || "Global",
     passShown: false,
@@ -321,6 +353,7 @@
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const up = (s) => String(s ?? "").trim().toUpperCase();
   const logged = () => !!(state.session && state.session.access_token);
+  const siteOrigin = () => `${location.origin}/`;
 
   function nickOf(raw) {
     let s = String(raw || "").trim().toUpperCase();
@@ -609,6 +642,7 @@
     state.session = null;
     state.me = null;
     state.liked = new Set();
+    state.saved = new Set();
     state.followed = new Set();
     localStorage.removeItem("tw.session");
     sessionStorage.removeItem("tw.session");
@@ -659,7 +693,7 @@
         isPublic: row.is_public !== false,
         isPremium: row.is_premium === true || row.is_premium === "true",
       };
-      await Promise.all([pullMyLikes(), pullMyFollows(), pullHypes()]);
+      await Promise.all([pullMyLikes(), pullMySaves(), pullMyFollows(), pullHypes()]);
     } catch {
       /* keep token; catalog still works */
     }
@@ -742,6 +776,30 @@
     await hydrateMe();
   }
 
+  function saveStoreKey() {
+    return state.me?.id ? `tw.saved.${state.me.id}` : "";
+  }
+  function readLocalSaves() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(saveStoreKey()) || "[]");
+      return Array.isArray(raw) ? raw.map((id) => String(id)) : [];
+    } catch { return []; }
+  }
+  function writeLocalSaves() {
+    const key = saveStoreKey();
+    if (!key) return;
+    try { localStorage.setItem(key, JSON.stringify([...state.saved])); } catch {}
+  }
+  async function pullMySaves() {
+    if (!logged()) return;
+    const local = new Set(readLocalSaves());
+    try {
+      const rows = await sb("user_saved_outfits", `select=outfit_id&user_id=eq.${state.me.id}`);
+      for (const r of rows || []) local.add(String(r.outfit_id));
+    } catch { /* table or rls — local still holds */ }
+    state.saved = local;
+    writeLocalSaves();
+  }
   async function pullMyLikes() {
     if (!logged()) return;
     try {
@@ -946,8 +1004,19 @@
   function hash() {
     const h = (location.hash || "#/").replace(/^#/, "");
     if (h.includes("access_token=")) return { path: "", id: "" };
-    const parts = h.split("/").filter(Boolean);
+    const clean = h.split("?")[0];
+    const parts = clean.split("/").filter(Boolean);
     return { path: parts[0] || "", id: decodeURIComponent(parts.slice(1).join("/") || "") };
+  }
+  function authQuery() {
+    const q = new URLSearchParams(location.search);
+    const raw = (location.hash || "").replace(/^#/, "");
+    const i = raw.indexOf("?");
+    if (i >= 0) {
+      const hq = new URLSearchParams(raw.slice(i + 1));
+      for (const [k, v] of hq) if (v) q.set(k, v);
+    }
+    return q;
   }
   function go(to) {
     if (location.hash === to) render();
@@ -1018,7 +1087,7 @@
   function hideDlg() { $("#dlg").hidden = true; $("#dlg").innerHTML = ""; }
 
   function needAuth(kind) {
-    const body = kind === "comment" ? t("authComment") : kind === "follow" ? t("authFollow") : kind === "hype" ? t("authHype") : t("authLike");
+    const body = kind === "comment" ? t("authComment") : kind === "follow" ? t("authFollow") : kind === "hype" ? t("authHype") : kind === "save" ? t("authSave") : t("authLike");
     showDlg(`
       <h2>${I.key} ${t("authTitle")}</h2>
       <p>${esc(body).replace(/\n/g, "<br>")}</p>
@@ -1323,7 +1392,7 @@
   function carousel(urls, alt, likeId) {
     if (!urls.length) return `<div class="photo"></div>`;
     const slides = urls.map((u, i) => imgTag(u, alt, `data-i="${i}"${i ? " hidden" : ' fetchpriority="high"'}`)).join("");
-    return `<div class="photo" data-car="${urls.length}"${likeId ? ` data-dblike="${esc(likeId)}"` : ""}>${slides}${carouselNav(urls.length)}${likeId ? `<div class="burst burst-like" aria-hidden="true"><div class="burst-plate">${I.heart.replace("<svg", '<svg class="burst-glyph"')}<span class="burst-pill"><span class="burst-knob"></span></span></div></div>` : ""}</div>`;
+    return `<div class="photo" data-car="${urls.length}"${likeId ? ` data-dblike="${esc(likeId)}"` : ""}>${slides}${carouselNav(urls.length)}${likeId ? `<div class="burst burst-like" aria-hidden="true"><div class="burst-plate">${I.heart.replace("<svg", '<svg class="burst-glyph"')}<span class="burst-pill"><span class="burst-knob"></span></span></div></div><div class="burst burst-save" aria-hidden="true"><div class="burst-plate">${I.mark.replace("<svg", '<svg class="burst-glyph burst-mark"')}<span class="burst-pill"><span class="burst-knob"></span></span></div></div>` : ""}</div>`;
   }
   function bindCarousel(root) {
     root.querySelectorAll("[data-car]").forEach((el) => {
@@ -1392,6 +1461,7 @@
     const pcs = piecesForFit(fit.id);
     const items = pcs.length === 1 ? t("item") : t("items").replace("{n}", String(pcs.length));
     const liked = state.liked.has(fit.id);
+    const saved = state.saved.has(fit.id);
     const nLike = state.likeCounts[fit.id] ?? (liked ? 1 : 0);
     const nCom = (state.comments[fit.id] || []).length;
     const avatars = names.length > 1
@@ -1417,7 +1487,7 @@
         <div class="actions">
           <button class="act is-heart ${liked ? "on" : ""}" type="button" data-like="${esc(fit.id)}">${liked ? I.heart : I.heartO}<b>${nLike || "0"}</b></button>
           <button class="act" type="button" data-comment="${esc(fit.id)}">${I.chat}<b>${nCom || "0"}</b></button>
-          <button class="act" type="button" data-save="${esc(fit.id)}">${I.mark}</button>
+          <button class="act is-save ${saved ? "on" : ""}" type="button" data-save="${esc(fit.id)}">${saved ? I.mark : I.markO}</button>
         </div>
         ${pcs.length ? `<section class="feed-archive">
           <div class="feed-archive-h">
@@ -1652,7 +1722,7 @@
     const followed = [...state.followed];
     return `
       <article class="plate">
-        <header class="plate-head">${t("plate")}</header>
+        <header class="plate-head"><button class="plate-set" type="button" data-go="#/settings" aria-label="${t("settings")}">${I.gear}</button>${t("plate")}</header>
         <div class="plate-body">
           <label class="photo-edit">
             ${ava(me.avatar, me.username, "ava lg")}
@@ -1664,7 +1734,7 @@
         </div>
       </article>
       <div class="account-stats">
-        <div><em>${t("saved")}</em><b>—</b></div>
+        <button type="button" data-go="#/saved"><em>${t("saved")}</em><b>${state.saved.size}</b></button>
         <div><em>${t("accComments")}</em><b>${mine.length}</b></div>
         <div><em>${t("accFollow")}</em><b>${followed.length}</b></div>
       </div>
@@ -1678,9 +1748,67 @@
         }).join("") : `<p class="empty" style="padding:24px 0">${t("noFollow")}</p>`}
         <p class="kicker" style="margin-top:28px">${t("accComments")}</p>
         ${mine.length ? mine.slice(0, 8).map((c) => `<div class="comment">${ava(me.avatar, me.username)}<div><p>${esc(c.text)}</p><em>${esc(ago(c.at))}</em></div></div>`).join("") : `<p class="empty" style="padding:24px 0">${t("commentsEmpty")}</p>`}
-        <button class="cta" type="button" data-logout style="margin-top:32px">${t("logout")}</button>
       </div>
     `;
+  }
+
+  function settingsPage() {
+    const langLabel = state.lang === "tr" ? "Türkçe" : "English";
+    const region = state.contentRegion || state.region || "Global";
+    const back = logged() ? "#/account" : "#/";
+    return `<div class="set-page">
+      <div class="back-row"><button class="sq" type="button" data-go="${back}">${I.back}</button><h1 class="set-title">${t("settings")}</h1><span class="sq is-ghost" aria-hidden="true"></span></div>
+      <p class="kicker">${t("setPref")}</p>
+      ${selectField(t("setRegion"), "region", region)}
+      ${selectField(t("lang"), "language", langLabel)}
+      ${logged() && state.me ? `
+        <p class="kicker">${t("setPrivacy")}</p>
+        <button class="set-toggle ${state.me.isPublic ? "is-on" : ""}" type="button" data-public>
+          <span><em>${t("setPublic")}</em><strong>${t("publicDesc")}</strong></span>
+          <i>${state.me.isPublic ? I.check : ""}</i>
+        </button>
+      ` : ""}
+      <p class="kicker">${t("setHelp")}</p>
+      <a class="set-row" href="mailto:pr@thewearson.com">${I.mail}<span>${t("setPr")}<em>PR@THEWEARSON.COM</em></span>${I.fwd}</a>
+      <a class="set-row" href="mailto:support@thewearson.com">${I.mail}<span>${t("setHc")}<em>SUPPORT@THEWEARSON.COM</em></span>${I.fwd}</a>
+      <p class="kicker">${t("setAccount")}</p>
+      ${logged() ? `<div class="set-box">
+        <button class="set-acc" type="button" data-go="#/saved">${I.markO}<span>${t("saved")}</span>${I.fwd}</button>
+        <button class="set-acc is-danger" type="button" data-deactivate>${I.warn}<span>${t("accDeactivate")}</span>${I.fwd}</button>
+        <button class="set-acc is-danger last" type="button" data-logout>${I.out}<span>${t("logout")}</span>${I.fwd}</button>
+      </div>` : `<button class="set-acc" type="button" data-go="#/join">${I.key}<span>${t("authJoin")}</span>${I.fwd}</button>`}
+    </div>`;
+  }
+
+  function savedPage() {
+    if (!logged()) return joinPage();
+    const fits = state.fits.filter((f) => state.saved.has(f.id));
+    return `<div class="set-page">
+      <div class="back-row"><button class="sq" type="button" data-go="#/settings">${I.back}</button><h1 class="set-title">${t("saved")}</h1><span class="sq is-ghost" aria-hidden="true"></span></div>
+      <p class="hint set-hint">${esc(t("savedHint"))}</p>
+      ${fits.length ? `<div class="grid3">${fits.map((f) => `
+        <button type="button" data-go="#/f/${encodeURIComponent(f.id)}">${f.imageUrl ? `<img src="${esc(f.imageUrl)}" alt="">` : ""}</button>
+      `).join("")}</div>` : `<p class="empty">${t("savedEmpty")}</p>`}
+    </div>`;
+  }
+
+  function verifyPage() {
+    if (logged()) return accountPage();
+    const email = state.verifyEmail;
+    return `<div class="auth-page auth-form">
+      ${authHero({ back: true })}
+      ${authDesk(t("verifyTitle"), `
+        ${authLang()}
+        <p class="hint">${esc(t("verifyDesc"))}${email ? `<br>${esc(email.toUpperCase())}` : ""}</p>
+        ${state.authErr ? `<p class="err">${esc(state.authErr)}</p>` : ""}
+        <form id="verifyForm">
+          ${email ? "" : bfield(t("email"), "email", "email", t("emailHint"), `<span class="bfield-ico">${I.mail}</span>`, 'autocomplete="username"')}
+          ${bfield(t("verifyTitle"), "token", "text", t("verifyHint"), `<span class="bfield-ico">${I.key}</span>`, 'inputmode="numeric" autocomplete="one-time-code" maxlength="8" data-verify-code')}
+          <button class="cta is-fill ${state.busy ? "is-busy" : ""}" type="submit">${t("verifyBtn")}</button>
+        </form>
+        <button class="forgot" type="button" data-resend-verify>${t("verifyResend")}</button>
+      `)}
+    </div>`;
   }
 
   function starPage(name) {
@@ -2091,15 +2219,17 @@
     if ($("[data-comment-form]")?.dataset.commentForm === id) paintComments(id);
   }
 
-  function playLikeBurst(id) {
+  function playBurst(id, kind) {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     const photo = document.querySelector(`[data-dblike="${CSS.escape(id)}"]`);
     if (!photo) return;
-    photo.classList.remove("is-like-burst");
+    const cls = kind === "save" ? "is-save-burst" : "is-like-burst";
+    photo.classList.remove("is-like-burst", "is-save-burst");
     void photo.offsetWidth;
-    photo.classList.add("is-like-burst");
-    window.setTimeout(() => photo.classList.remove("is-like-burst"), 900);
+    photo.classList.add(cls);
+    window.setTimeout(() => photo.classList.remove(cls), 900);
   }
+  function playLikeBurst(id) { playBurst(id, "like"); }
 
   async function toggleLike(id) {
     if (!logged()) { needAuth("like"); return; }
@@ -2115,6 +2245,22 @@
       if (on) state.liked.delete(id); else state.liked.add(id);
       state.likeCounts[id] = Math.max(0, (state.likeCounts[id] || 0) + (on ? -1 : 1));
       render();
+    }
+  }
+
+  async function toggleSave(id) {
+    if (!logged()) { needAuth("save"); return; }
+    const on = !state.saved.has(id);
+    if (on) state.saved.add(id); else state.saved.delete(id);
+    writeLocalSaves();
+    render();
+    if (on) playBurst(id, "save");
+    snack(on ? t("savedMsg") : t("removedMsg"));
+    try {
+      if (on) await sb("user_saved_outfits", "", { method: "POST", body: { user_id: state.me.id, outfit_id: id }, prefer: "return=minimal" });
+      else await sb("user_saved_outfits", `user_id=eq.${state.me.id}&outfit_id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
+    } catch {
+      /* local save still holds until Nazım adds user_saved_outfits */
     }
   }
 
@@ -2210,10 +2356,11 @@
     if (await nickOwnedByOther(nick)) { errorDlg(t("nickTaken")); return; }
     state.busy = true; state.authErr = ""; render();
     try {
-      const data = await auth("signup", { email: email.trim(), password, data: { username: nick } });
+      const data = await auth(`signup?redirect_to=${encodeURIComponent(siteOrigin())}`, { email: email.trim(), password, data: { username: nick } });
       if (data.user && (!data.user.identities || data.user.identities.length === 0) && !data.session && !data.access_token) {
         state.authErr = t("inUse"); state.busy = false; render(); return;
       }
+      stashNick(nick);
       if (data.access_token) saveSession(data);
       else if (data.session?.access_token) saveSession(data.session);
       else {
@@ -2222,16 +2369,26 @@
           saveSession(sess);
         } catch (e) {
           const msg = String(e.message || "").toLowerCase();
-          state.authErr = msg.includes("confirm") ? t("confirm") : t("errSignup");
+          if (msg.includes("confirm") || msg.includes("invalid login") || msg.includes("invalid credentials")) {
+            holdVerify(email.trim(), "signup");
+            state.busy = false;
+            go("#/verify");
+            return;
+          }
+          state.authErr = t("errSignup");
           state.busy = false; render(); return;
         }
       }
-      stashNick(nick);
+      if (!logged()) {
+        holdVerify(email.trim(), "signup");
+        state.busy = false;
+        go("#/verify");
+        return;
+      }
       await afterAuth(nick);
       if (logged()) state.region = state.contentRegion;
       state.busy = false;
-      go(logged() ? "#/account" : "#/login");
-      if (!logged()) state.authErr = t("confirm");
+      go("#/account");
     } catch (e) {
       const msg = String(e.message || "").toLowerCase();
       state.authErr = msg.includes("already") || msg.includes("registered") ? t("inUse") : t("errSignup");
@@ -2244,6 +2401,56 @@
     try { await fetch(`${SB}/auth/v1/logout`, { method: "POST", headers: headers({ "Content-Type": "application/json" }) }); } catch {}
     clearSession();
     go("#/");
+  }
+
+  function holdVerify(email, kind) {
+    state.verifyEmail = email;
+    state.verifyKind = kind || "signup";
+    try {
+      sessionStorage.setItem("tw.verifyEmail", email);
+      sessionStorage.setItem("tw.verifyKind", state.verifyKind);
+    } catch {}
+  }
+  function clearVerify() {
+    state.verifyEmail = "";
+    state.verifyKind = "signup";
+    try {
+      sessionStorage.removeItem("tw.verifyEmail");
+      sessionStorage.removeItem("tw.verifyKind");
+    } catch {}
+  }
+  async function confirmVerify(email, token) {
+    const code = String(token || "").replace(/\D/g, "");
+    if (!email || code.length < 6) { errorDlg(t("verifyFail")); return; }
+    state.busy = true; state.authErr = ""; render();
+    try {
+      const data = await auth("verify", { type: state.verifyKind || "signup", email, token: code });
+      if (data.access_token) saveSession(data);
+      else if (data.session?.access_token) saveSession(data.session);
+      if (!logged()) throw new Error("verify");
+      clearVerify();
+      await afterAuth(pendingNick());
+      state.busy = false;
+      go("#/account");
+    } catch {
+      state.busy = false;
+      state.authErr = t("verifyFail");
+      render();
+    }
+  }
+  async function resendVerify() {
+    const email = state.verifyEmail;
+    if (!email) return;
+    try {
+      await auth(`resend?redirect_to=${encodeURIComponent(siteOrigin())}`, { type: state.verifyKind || "signup", email });
+      snack(t("confirm"));
+    } catch { snack(t("errAuth")); }
+  }
+  async function deactivateAccount() {
+    if (!logged()) return;
+    try { await rpc("wears_delete_own_account"); } catch { /* still sign out */ }
+    await signOut();
+    snack(t("accDeactivated"));
   }
 
   async function startOAuth(provider) {
@@ -2268,14 +2475,15 @@
 
   function stripAuthUrl() {
     const url = new URL(location.href);
-    ["code", "error", "error_description", "error_code", "state"].forEach((k) => url.searchParams.delete(k));
+    ["code", "error", "error_description", "error_code", "state", "token", "token_hash", "type"].forEach((k) => url.searchParams.delete(k));
     const hash = url.hash || "";
     if (hash.includes("access_token=") || hash.includes("error=")) url.hash = "";
+    else if (hash.includes("?")) url.hash = hash.split("?")[0];
     history.replaceState({}, "", url.pathname + url.search + (url.hash.startsWith("#/") ? url.hash : ""));
   }
 
   async function finishOAuth() {
-    const q = new URLSearchParams(location.search);
+    const q = authQuery();
     const rawHash = (location.hash || "").replace(/^#/, "");
     const hashBits = rawHash.includes("access_token=") || rawHash.includes("refresh_token=") || rawHash.includes("error=")
       ? new URLSearchParams(rawHash)
@@ -2297,7 +2505,8 @@
       });
       stripAuthUrl();
       await afterAuth();
-      return hashBits.get("type") === "recovery" ? "account" : "home";
+      const kind = hashBits.get("type");
+      return kind === "recovery" || kind === "signup" || kind === "email" ? "account" : "home";
     }
     if (code) {
       const verifier = localStorage.getItem("tw.pkce") || sessionStorage.getItem("tw.pkce") || "";
@@ -2318,6 +2527,30 @@
         stripAuthUrl();
         state.authErr = t("errAuth");
         return "join";
+      }
+    }
+    const tokenHash = q.get("token_hash");
+    const otp = q.get("token");
+    const kind = q.get("type") || state.verifyKind || "signup";
+    const mail = q.get("email") || state.verifyEmail;
+    if (tokenHash || (otp && mail)) {
+      if (mail) holdVerify(mail, kind);
+      try {
+        const body = tokenHash
+          ? { type: kind, token_hash: tokenHash }
+          : { type: kind, email: mail, token: otp };
+        const data = await auth("verify", body);
+        if (data.access_token) saveSession(data);
+        else if (data.session?.access_token) saveSession(data.session);
+        if (!logged()) throw new Error("verify");
+        clearVerify();
+        stripAuthUrl();
+        await afterAuth(pendingNick());
+        return "account";
+      } catch {
+        stripAuthUrl();
+        state.authErr = t("verifyFail");
+        return "verify";
       }
     }
     return "";
@@ -2351,15 +2584,16 @@
     if (key === "home") return on ? I.home : I.homeO;
     if (key === "stars") return on ? I.star : I.starO;
     if (key === "news") return on ? I.news : I.newsO;
+    if (key === "settings") return I.gear;
     return "";
   }
 
   function paintChrome() {
     const { path } = hash();
-    const nav = path === "stars" || path === "s" ? "stars" : path === "news" || path === "n" ? "news" : ["join", "login", "create", "account"].includes(path) ? "join" : path === "search" || path === "b" ? "" : "home";
+    const nav = path === "stars" || path === "s" ? "stars" : path === "news" || path === "n" ? "news" : ["join", "login", "create", "account", "verify"].includes(path) ? "join" : path === "settings" || path === "saved" ? "settings" : path === "search" || path === "b" ? "" : "home";
     const joinLabel = logged() ? t("account") : t("join");
     const joinHref = logged() ? "#/account" : "#/join";
-    const labels = { home: t("home"), stars: t("stars"), news: t("news"), join: joinLabel };
+    const labels = { home: t("home"), stars: t("stars"), news: t("news"), join: joinLabel, settings: t("settings") };
     document.querySelectorAll("[data-nav]").forEach((el) => {
       const key = el.dataset.nav;
       const on = key === nav;
@@ -2409,6 +2643,14 @@
       if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) { errorDlg(t("passDesc")); return; }
       signUp(email, password, username);
     });
+    $("#verifyForm")?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const email = String(fd.get("email") || state.verifyEmail || "").trim();
+      const token = String(fd.get("token") || "");
+      if (email) holdVerify(email, state.verifyKind || "signup");
+      confirmVerify(email, token);
+    });
     $("#avatarFile")?.addEventListener("change", (e) => {
       const file = e.target.files?.[0];
       if (file) uploadAvatar(file);
@@ -2443,6 +2685,8 @@
     const view = $("#view");
     const nickEl = document.activeElement?.hasAttribute?.("data-nick-input") ? document.activeElement : null;
     const nickDraft = nickEl ? nickEl.value : null;
+    const codeEl = document.activeElement?.hasAttribute?.("data-verify-code") ? document.activeElement : null;
+    const codeDraft = codeEl ? codeEl.value : null;
     const { path, id } = hash();
     const routeKey = `${path}/${id}`;
     const routeChanged = routeKey !== lastRoute;
@@ -2456,6 +2700,9 @@
     else if (path === "login") html = loginPage();
     else if (path === "create") html = createPage();
     else if (path === "account") html = accountPage();
+    else if (path === "settings") html = settingsPage();
+    else if (path === "saved") html = savedPage();
+    else if (path === "verify") html = verifyPage();
     else if (path === "s") html = starPage(id);
     else if (path === "f") html = fitPage(id);
     else if (path === "p") html = piecePage(id);
@@ -2468,6 +2715,15 @@
       const el = view.querySelector("[data-nick-input]");
       if (el) {
         el.value = nickDraft;
+        el.focus();
+        const end = el.value.length;
+        try { el.setSelectionRange(end, end); } catch {}
+      }
+    }
+    if (codeDraft != null) {
+      const el = view.querySelector("[data-verify-code]");
+      if (el) {
+        el.value = codeDraft;
         el.focus();
         const end = el.value.length;
         try { el.setSelectionRange(end, end); } catch {}
@@ -2522,7 +2778,22 @@
       commentsSheet(com);
       return;
     }
-    if (e.target.closest("[data-save]")) { e.preventDefault(); if (!logged()) needAuth("like"); return; }
+    const save = e.target.closest("[data-save]")?.dataset.save;
+    if (save) { e.preventDefault(); toggleSave(save); return; }
+    if (e.target.closest("[data-resend-verify]")) { e.preventDefault(); resendVerify(); return; }
+    if (e.target.closest("[data-deactivate-ok]")) { hideDlg(); deactivateAccount(); return; }
+    if (e.target.closest("[data-deactivate]")) {
+      e.preventDefault();
+      showDlg(`
+        <h2>${I.warn} ${t("accDeactivate")}</h2>
+        <p>${esc(t("accDeactivateD"))}</p>
+        <div class="dlg-actions">
+          <button class="ghost" type="button" data-close-dlg>${t("cancel")}</button>
+          <button class="fill is-danger" type="button" data-deactivate-ok>${t("accDeactivate")}</button>
+        </div>
+      `);
+      return;
+    }
     const hypeEl = e.target.closest("[data-hype]");
     if (hypeEl) {
       e.preventDefault();
@@ -2661,7 +2932,7 @@
       e.preventDefault();
       const email = String(new FormData(reset).get("email") || "").trim();
       if (!email) return;
-      auth(`recover?redirect_to=${encodeURIComponent(`${location.origin}/`)}`, { email }).then(() => { hideSheet(); snack(t("forgotSent")); }).catch(() => snack(t("errAuth")));
+      auth(`recover?redirect_to=${encodeURIComponent(siteOrigin())}`, { email }).then(() => { hideSheet(); snack(t("forgotSent")); }).catch(() => snack(t("errAuth")));
     }
   });
 
@@ -2694,6 +2965,7 @@
     if (dest === "join") go("#/join");
     else if (dest === "account") go("#/account");
     else if (dest === "home") go("#/");
+    else if (dest === "verify") go("#/verify");
     else render();
     load();
   })();
