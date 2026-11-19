@@ -96,6 +96,10 @@
       inUse: "THIS EMAIL IS ALREADY REGISTERED.",
       nickTaken: "THAT NICKNAME IS TAKEN.", nickInvalid: "3–18 LETTERS OR NUMBERS.",
       nickFail: "NICKNAME COULD NOT BE SAVED.",
+      nickBlocked: "THIS NICKNAME IS NOT ALLOWED.",
+      nickBlockedD: "SEXUAL, ABUSIVE ATTACK, OR TERROR-RELATED NAMES ARE BANNED. SLANG IS FINE.",
+      nickLimit: "3 CHANGES EVERY 2 MONTHS. LIMIT REACHED.",
+      nickLeft: "LEFT", nickWindow: "3 / 2 MONTHS",
       authTitle: "LOGIN REQUIRED",
       authLike: "LIKE THIS FIT YOU NEED TO BE LOGGED IN.\n\nJOIN THE WEARS ON COMMUNITY, REFLECT YOUR STYLE AND BUILD YOUR ARCHIVE.",
       authSave: "SAVE THIS FIT YOU NEED TO BE LOGGED IN.\n\nJOIN THE WEARS ON COMMUNITY, REFLECT YOUR STYLE AND BUILD YOUR ARCHIVE.",
@@ -186,6 +190,10 @@
       inUse: "BU E-POSTA ZATEN KAYITLI.",
       nickTaken: "BU NICKNAME ALINMIŞ.", nickInvalid: "3–18 HARF VEYA RAKAM.",
       nickFail: "NICKNAME KAYDEDİLEMEDİ.",
+      nickBlocked: "BU NICKNAME KULLANILAMAZ.",
+      nickBlockedD: "CİNSEL, AĞIR SÖVGÜ VEYA TERÖR İÇERİKLİ İSİMLER YASAKTIR. SLANG SERBEST.",
+      nickLimit: "2 AYDA 3 DEĞİŞİKLİK. LİMİT DOLDU.",
+      nickLeft: "KALDI", nickWindow: "2 AYDA 3",
       authTitle: "GİRİŞ GEREKLİ",
       authLike: "BU FIT’İ BEĞENMEK İÇİN GİRİŞ YAPMANIZ GEREKİYOR.\n\nTHE WEARS ON TOPLULUĞUNA KATILIN, TARZINIZI YANSITIN, ARŞİVİNİZİ KURUN.",
       authSave: "BU FIT’İ KAYDETMEK İÇİN GİRİŞ YAPMANIZ GEREKİYOR.\n\nTHE WEARS ON TOPLULUĞUNA KATILIN, TARZINIZI YANSITIN, ARŞİVİNİZİ KURUN.",
@@ -358,10 +366,63 @@
   function nickOf(raw) {
     let s = String(raw || "").trim().toUpperCase();
     while (s.startsWith("@")) s = s.slice(1).trim().toUpperCase();
-    s = s.replace(/İ/g, "I").replace(/Ş/g, "S").replace(/Ğ/g, "G").replace(/Ü/g, "U").replace(/Ö/g, "O").replace(/Ç/g, "C");
+    s = s.replace(/İ/g, "I").replace(/Ş/g, "S").replace(/Ğ/g, "G").replace(/Ü/g, "U").replace(/Ö/g, "O").replace(/Ç/g, "C").replace(/Â/g, "A").replace(/Î/g, "I").replace(/Û/g, "U");
     return s.replace(/[^A-Z0-9]/g, "");
   }
   const nickOk = (n) => /^[A-Z0-9]{3,18}$/.test(n);
+  const NICK_LIMIT = 3;
+  const NICK_WINDOW_MS = 60 * 24 * 60 * 60 * 1000;
+  const NICK_BLOCK_EXACT = new Set(["SEX", "ASS", "CUM", "FCK", "KKK", "KKK1", "APO", "NAZI", "ISIS"]);
+  const NICK_BLOCK_HAS = [
+    "SEXY", "PORN", "XXX", "NUDE", "NUDES", "DICK", "COCK", "PUSSY", "PENIS", "VAGINA",
+    "ANAL", "SPERM", "BOOBS", "TITS", "HORNY", "SLUT", "WHORE", "ONLYFANS", "NSFW",
+    "FUCK", "FAGGOT", "NIGGER", "NIGGA", "RETARD", "HITLER", "NAZIS", "NAZISM",
+    "ISIL", "DAESH", "ALQAEDA", "QAEDA", "TALIBAN", "BOKOHARAM",
+    "PKK", "YPG", "YPJ", "PJAK", "KADEK", "DHKP", "MLKP", "ASALA",
+    "OCALAN", "OCELAN", "OCALEN",
+    "TERRORIST", "TERORIST", "TERRORISM", "TERORIZM", "TERROR", "TEROR",
+    "HAMAS", "HEZBOLLAH", "HIZBULLAH", "HIZBALLAH",
+    "SIKIS", "SIKME", "YARRAK", "YARRA", "AMCIK", "OROSPU", "PEZEVENK", "GAVAT",
+  ];
+  function nickFold(raw) {
+    const n = nickOf(raw);
+    const swap = { 0: "O", 1: "I", 3: "E", 4: "A", 5: "S", 7: "T", 8: "B" };
+    return n.replace(/[0134578]/g, (c) => swap[c] || c);
+  }
+  function nickBlocked(raw) {
+    const n = nickFold(raw);
+    if (n.length < 3) return false;
+    if (NICK_BLOCK_EXACT.has(n)) return true;
+    for (const term of NICK_BLOCK_EXACT) {
+      if (n.startsWith(term) && /^[0-9]*$/.test(n.slice(term.length))) return true;
+    }
+    return NICK_BLOCK_HAS.some((term) => n.includes(term));
+  }
+  function nickChangeKey() {
+    return state.me?.id ? `tw.nickChanges.${state.me.id}` : "";
+  }
+  function readNickChanges() {
+    const key = nickChangeKey();
+    if (!key) return [];
+    const cutoff = Date.now() - NICK_WINDOW_MS;
+    try {
+      const raw = JSON.parse(localStorage.getItem(key) || "[]");
+      return (Array.isArray(raw) ? raw : []).map(Number).filter((t) => t > cutoff);
+    } catch { return []; }
+  }
+  function nickChangesLeft() {
+    return Math.max(0, NICK_LIMIT - readNickChanges().length);
+  }
+  function noteNickChange() {
+    const key = nickChangeKey();
+    if (!key) return;
+    try { localStorage.setItem(key, JSON.stringify([...readNickChanges(), Date.now()])); } catch {}
+  }
+  function nickGuardCopy(raw, { limit = false } = {}) {
+    if (nickBlocked(raw)) return `${t("nickBlocked")}  ${t("nickBlockedD")}`;
+    if (limit) return `${nickChangesLeft()} ${t("nickLeft")}  ·  ${t("nickWindow")}`;
+    return "";
+  }
   function emailNick(user) {
     return nickOf(String(user?.email || "").split("@")[0]);
   }
@@ -739,6 +800,7 @@
     const nick = nickOf(raw);
     const id = state.me?.id || state.session?.user?.id;
     if (!id || !nickOk(nick)) return { ok: false, taken: false };
+    if (nickBlocked(nick)) return { ok: false, taken: false, blocked: true };
     if (await nickOwnedByOther(nick, id)) return { ok: false, taken: true };
     try {
       await sb("users", `id=eq.${id}`, { method: "PATCH", body: { username: nick }, prefer: "return=minimal" });
@@ -1049,7 +1111,7 @@
   function errorDlg(msg) {
     showDlg(`
       <h2>${I.warn} ${t("errorTitle")}</h2>
-      <p>${esc(msg)}</p>
+      <p>${esc(msg).replace(/\n/g, "<br>")}</p>
       <div class="dlg-actions">
         <button class="fill" type="button" data-close-dlg>${t("errorOk")}</button>
       </div>
@@ -1698,7 +1760,8 @@
         ${state.authErr ? `<p class="err">${esc(state.authErr)}</p>` : ""}
         <form id="createForm">
           ${bfield(t("email"), "email", "email", t("emailHint"), `<span class="bfield-ico">${I.mail}</span>`, 'autocomplete="email"')}
-          ${bfield(t("nick"), "username", "text", t("nickHint"), `<span class="bfield-ico">${I.personO}</span>`, 'maxlength="18" autocomplete="nickname"')}
+          ${bfield(t("nick"), "username", "text", t("nickHint"), `<span class="bfield-ico">${I.personO}</span>`, 'maxlength="18" autocomplete="nickname" data-nick-create')}
+          <p class="nick-guard" data-nick-guard hidden></p>
           ${bfield(t("pass"), "password", passType, t("passHint"), `<button class="bfield-ico" type="button" data-toggle-pass>${passIco}</button>`, 'autocomplete="new-password"')}
           <p class="hint">${t("passDesc")}</p>
           ${selectField(t("country"), "country", state.country)}
@@ -1731,6 +1794,7 @@
           </label>
           <button type="button" class="ig-handle" data-pick-photo>${t("changePhoto")}</button>
           <h1><input class="nick-inline" maxlength="18" value="${esc(me.username)}" placeholder="${esc(t("nick"))}" data-nick-input aria-label="${t("editNick")}"></h1>
+          <p class="nick-guard" data-nick-guard>${esc(nickGuardCopy(me.username, { limit: true }))}</p>
         </div>
       </article>
       <div class="account-stats">
@@ -2340,19 +2404,25 @@
     if (!nick) return;
     if (!nickOk(nick)) { errorDlg(t("nickInvalid")); render(); return; }
     if (nick === nickOf(state.me.username)) return;
+    if (nickBlocked(nick)) { errorDlg(`${t("nickBlocked")}\n\n${t("nickBlockedD")}`); render(); return; }
+    if (nickChangesLeft() <= 0) { errorDlg(t("nickLimit")); render(); return; }
     stashNick(nick);
     const out = await persistNick(nick);
     if (!out.ok) {
       await hydrateMe();
       if (nickOf(state.me?.username) === nick) { render(); return; }
-      errorDlg(out.taken ? t("nickTaken") : t("nickFail"));
+      errorDlg(out.blocked ? `${t("nickBlocked")}\n\n${t("nickBlockedD")}` : out.taken ? t("nickTaken") : t("nickFail"));
+      render();
+      return;
     }
+    noteNickChange();
     render();
   }
 
   async function signUp(email, password, username) {
     const nick = nickOf(username);
     if (!nickOk(nick)) { errorDlg(t("nickInvalid")); return; }
+    if (nickBlocked(nick)) { errorDlg(`${t("nickBlocked")}\n\n${t("nickBlockedD")}`); return; }
     if (await nickOwnedByOther(nick)) { errorDlg(t("nickTaken")); return; }
     state.busy = true; state.authErr = ""; render();
     try {
@@ -2654,6 +2724,24 @@
     $("#avatarFile")?.addEventListener("change", (e) => {
       const file = e.target.files?.[0];
       if (file) uploadAvatar(file);
+    });
+    bindNickGuard();
+  }
+
+  function paintNickGuard(input) {
+    const note = document.querySelector("[data-nick-guard]");
+    if (!note || !input) return;
+    const limit = input.hasAttribute("data-nick-input");
+    const copy = nickGuardCopy(input.value, { limit });
+    const blocked = nickBlocked(input.value);
+    note.hidden = !copy;
+    note.textContent = copy;
+    note.classList.toggle("is-bad", blocked);
+  }
+  function bindNickGuard() {
+    document.querySelectorAll("[data-nick-input], [data-nick-create]").forEach((el) => {
+      el.addEventListener("input", () => paintNickGuard(el));
+      paintNickGuard(el);
     });
   }
 

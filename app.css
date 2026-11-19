@@ -2377,6 +2377,21 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
   text-transform: uppercase;
   background: transparent;
 }
+.nick-guard {
+  margin: 10px 0 0;
+  font-family: var(--display);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  line-height: 1.35;
+  color: var(--ink54);
+}
+.nick-guard.is-bad {
+  font-size: 9px;
+  letter-spacing: 0.4px;
+  color: #8b0000;
+}
+.auth-desk-body .nick-guard { margin: 0 0 16px; }
 .sheet-head {
   display: grid;
   grid-template-columns: 48px 1fr 48px;
