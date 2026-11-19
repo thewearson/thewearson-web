@@ -1491,6 +1491,7 @@
         <button class="cta" type="button" data-go="#/login">${t("logIn")}</button>
         <button class="cta is-fill" type="button" data-go="#/create">${t("create")}</button>
         <div class="or-row"><i></i>${t("or")}<i></i></div>
+        ${state.authErr ? `<p class="err">${esc(state.authErr)}</p>` : ""}
         <button class="social-btn" type="button" data-oauth="apple">${I.apple} ${t("apple")}</button>
         <button class="social-btn" type="button" data-oauth="google">${I.google} ${t("google")}</button>
         <button class="guest-link" type="button" data-go="#/">${t("guest")}</button>
@@ -2152,7 +2153,16 @@
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
     const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
     const redirect = `${location.origin}/`;
-    location.href = `${SB}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(redirect)}&code_challenge=${encodeURIComponent(challenge)}&code_challenge_method=S256`;
+    const href = `${SB}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(redirect)}&code_challenge=${encodeURIComponent(challenge)}&code_challenge_method=S256`;
+    try {
+      const r = await fetch(href, { redirect: "manual", headers: { apikey: KEY, Accept: "application/json" } });
+      if (r.status >= 400 && r.status < 500) {
+        state.authErr = t("errAuth");
+        render();
+        return;
+      }
+    } catch {}
+    location.href = href;
   }
 
   function stripAuthUrl() {
