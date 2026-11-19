@@ -61,6 +61,7 @@
       starsIndex: "IN THE ARCHIVE",
       starsEmpty: "NO ARTISTS IN THIS REGION.",
       az: "A-Z", trend: "TRENDING",
+      starsFollowEmpty: "NO FOLLOWED ARTISTS.",
       newsSub: "DAILY DROP.",
       newsDesc: "NEW RELEASES, COLLABS & WHAT’S NEXT.",
       newsIndex: "DISPATCHES",
@@ -155,6 +156,7 @@
       starsIndex: "ARŞİVDE",
       starsEmpty: "BU BÖLGEDE SANATÇI YOK.",
       az: "A-Z", trend: "TRENDING",
+      starsFollowEmpty: "TAKİP EDİLEN SANATÇI YOK.",
       newsSub: "GÜNLÜK DROP.",
       newsDesc: "YENİ ÇIKANLAR, COLLAB’LER VE SIRADA NE VAR.",
       newsIndex: "HABER",
@@ -327,6 +329,7 @@
     region: "Global",
     privateFeed: false,
     starRegion: "ALL",
+    starFollowed: false,
     trending: false,
     artists: [],
     fits: [],
@@ -361,6 +364,8 @@
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const up = (s) => String(s ?? "").trim().toUpperCase();
   const logged = () => !!(state.session && state.session.access_token);
+  const meId = () => state.me?.id || state.session?.user?.id || "";
+  const artistKey = (name) => up(name).replace(/[^A-Z0-9]/g, "");
   const siteOrigin = () => `${location.origin}/`;
 
   function nickOf(raw) {
@@ -705,6 +710,7 @@
     state.liked = new Set();
     state.saved = new Set();
     state.followed = new Set();
+    state.starFollowed = false;
     localStorage.removeItem("tw.session");
     sessionStorage.removeItem("tw.session");
   }
@@ -869,17 +875,49 @@
       state.liked = new Set((rows || []).map((r) => String(r.outfit_id)));
     } catch { /* rls */ }
   }
+  function followStoreKey() {
+    const id = meId();
+    return id ? `tw.followed.${id}` : "";
+  }
+  function readLocalFollows() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(followStoreKey()) || "[]");
+      return Array.isArray(raw) ? raw.map((n) => up(n)).filter(Boolean) : [];
+    } catch { return []; }
+  }
+  function writeLocalFollows() {
+    const key = followStoreKey();
+    if (!key) return;
+    try { localStorage.setItem(key, JSON.stringify([...state.followed])); } catch {}
+  }
+  function artistById(id) {
+    const want = String(id || "").toLowerCase();
+    if (!want) return null;
+    return state.artists.find((a) => String(a.id).toLowerCase() === want) || null;
+  }
+  function isFollowed(name) {
+    const n = up(name);
+    if (state.followed.has(n)) return true;
+    const k = artistKey(n);
+    if (!k) return false;
+    for (const x of state.followed) if (artistKey(x) === k) return true;
+    return false;
+  }
   async function pullMyFollows() {
     if (!logged()) return;
-    try {
-      const rows = await sb("user_follows_artist", `select=artist_id&user_id=eq.${state.me.id}`);
-      const names = new Set();
-      for (const r of rows || []) {
-        const a = state.artists.find((x) => x.id === String(r.artist_id));
-        if (a) names.add(a.name);
-      }
-      state.followed = names;
-    } catch { /* rls */ }
+    const local = new Set(readLocalFollows());
+    const id = meId();
+    if (id) {
+      try {
+        const rows = await sb("user_follows_artist", `select=artist_id&user_id=eq.${id}`);
+        for (const r of rows || []) {
+          const a = artistById(r.artist_id);
+          if (a) local.add(a.name);
+        }
+      } catch { /* rls — local still holds */ }
+    }
+    state.followed = local;
+    writeLocalFollows();
   }
   async function pullLikeCounts() {
     try {
@@ -1033,7 +1071,11 @@
 
   function artistByName(name) {
     const n = up(name);
-    return state.artists.find((a) => a.name === n);
+    const exact = state.artists.find((a) => a.name === n);
+    if (exact) return exact;
+    const k = artistKey(n);
+    if (!k) return null;
+    return state.artists.find((a) => artistKey(a.name) === k) || null;
   }
   function fitArtists(fit) {
     const names = [];
@@ -1057,7 +1099,7 @@
     return state.fits.filter((f) => {
       const names = fitArtists(f);
       if (!names.length) return false;
-      if (state.privateFeed) return names.some((n) => state.followed.has(n));
+      if (state.privateFeed) return names.some((n) => isFollowed(n));
       if (state.region === "Global") return true;
       return names.some((n) => artistByName(n)?.continent === state.region);
     });
@@ -1616,12 +1658,15 @@
   }
   function stars() {
     const chips = ["ALL", "USA", "TR", "EU", "CANADA", "ASIA", "AFRICA"];
-    let list = state.artists.filter((a) => state.starRegion === "ALL" || a.region === state.starRegion);
+    let list = state.starFollowed
+      ? state.artists.filter((a) => isFollowed(a.name))
+      : state.artists.filter((a) => state.starRegion === "ALL" || a.region === state.starRegion);
     if (state.trending) {
       const count = (n) => fitsForArtist(n).length;
       list = [...list].sort((a, b) => count(b.name) - count(a.name) || a.name.localeCompare(b.name));
     }
-    const total = state.artists.length;
+    const total = state.starFollowed ? list.length : state.artists.length;
+    const empty = state.starFollowed ? t("starsFollowEmpty") : t("starsEmpty");
     return `<div class="stars-page">
       <header class="stars-mast">
         <div class="stars-lockup">
@@ -1635,13 +1680,14 @@
       </header>
       <p class="stars-dek">${t("starsDesc")}</p>
       <div class="stars-rail">
-        <div class="stars-regions">${chips.map((c) => `<button class="chip ${state.starRegion === c ? "is-on" : ""}" type="button" data-chip="${c}">${c}</button>`).join("")}</div>
+        <div class="stars-regions">${chips.map((c) => `<button class="chip ${!state.starFollowed && state.starRegion === c ? "is-on" : ""}" type="button" data-chip="${c}">${c}</button>`).join("")}</div>
         <div class="stars-sort">
-          <button type="button" class="${state.trending ? "" : "is-on"}" data-trend="0">${t("az")}</button>
-          <button type="button" class="${state.trending ? "is-on" : ""}" data-trend="1">${t("trend")}</button>
+          <button type="button" class="${!state.trending && !state.starFollowed ? "is-on" : ""}" data-trend="0">${t("az")}</button>
+          <button type="button" class="${state.trending && !state.starFollowed ? "is-on" : ""}" data-trend="1">${t("trend")}</button>
+          <button type="button" class="${state.starFollowed ? "is-on" : ""}" data-star-followed>${t("following")}</button>
         </div>
       </div>
-      ${!state.ready ? `<p class="empty">${t("connecting")}</p>` : list.length ? `<div class="stars">${list.map(starPlate).join("")}</div>` : `<p class="empty">${t("starsEmpty")}</p>`}
+      ${!state.ready ? `<p class="empty">${t("connecting")}</p>` : list.length ? `<div class="stars">${list.map(starPlate).join("")}</div>` : `<p class="empty">${esc(empty)}</p>`}
     </div>`;
   }
 
@@ -1893,7 +1939,7 @@
     const fits = fitsForArtist(name);
     if (!a && !fits.length) return `<p class="empty">${t("none")}</p>`;
     const who = a?.name || up(name);
-    const on = state.followed.has(who);
+    const on = isFollowed(who);
     const ig = a?.instagram;
     return `
       <div class="back-row"><button class="sq" type="button" data-go="#/stars">${I.back}</button></div>
@@ -1904,7 +1950,7 @@
           <h1>${esc(who)}</h1>
           ${a?.country ? `<span class="stamp">${esc(a.country)}</span>` : ""}
           ${ig ? `<a class="ig-handle" href="https://instagram.com/${esc(ig)}" target="_blank" rel="noopener">@${esc(up(ig))}</a>` : ""}
-          <button class="follow ${on ? "is-on" : ""}" type="button" data-follow="${esc(who)}">${on ? t("following") : t("follow")}</button>
+          <button class="follow ${on ? "is-on" : ""}" type="button" data-follow="${esc(who)}" data-follow-id="${esc(a?.id || "")}">${on ? t("following") : t("follow")}</button>
         </div>
       </article>
       <div class="stats">
@@ -2159,7 +2205,6 @@
     if (!pool.length) return [];
     const taste = loadTaste();
     const hasTaste = Object.keys(taste).length > 0;
-    const followed = new Set([...state.followed].map(up));
     const brands = hasTaste ? tasteWeights("brand") : {};
     const tokens = hasTaste ? tasteWeights("token") : {};
     const colors = hasTaste ? tasteWeights("color") : {};
@@ -2183,7 +2228,7 @@
         n += nearScore(p, piece) * 4;
       }
       const art = pieceArtistName(p);
-      if (art && followed.has(art)) n += 8;
+      if (art && isFollowed(art)) n += 8;
       return n;
     };
     return pool.sort((a, b) => {
@@ -2359,19 +2404,26 @@
     }
   }
 
-  async function toggleFollow(name) {
+  async function toggleFollow(name, id) {
     if (!logged()) { needAuth("follow"); return; }
-    const a = artistByName(name);
+    const a = artistById(id) || artistByName(name);
     if (!a) return;
-    const on = !state.followed.has(a.name);
-    if (on) state.followed.add(a.name); else state.followed.delete(a.name);
+    const on = !isFollowed(a.name);
+    if (on) state.followed.add(a.name);
+    else {
+      for (const n of [...state.followed]) {
+        if (n === a.name || artistKey(n) === artistKey(a.name)) state.followed.delete(n);
+      }
+    }
+    writeLocalFollows();
     render();
+    const userId = meId();
+    if (!userId || !a.id) return;
     try {
-      if (on) await sb("user_follows_artist", "", { method: "POST", body: { user_id: state.me.id, artist_id: a.id }, prefer: "return=minimal" });
-      else await sb("user_follows_artist", `user_id=eq.${state.me.id}&artist_id=eq.${a.id}`, { method: "DELETE", prefer: "return=minimal" });
-    } catch {
-      if (on) state.followed.delete(a.name); else state.followed.add(a.name);
-      render();
+      if (on) await sb("user_follows_artist", "", { method: "POST", body: { user_id: userId, artist_id: a.id }, prefer: "return=minimal" });
+      else await sb("user_follows_artist", `user_id=eq.${userId}&artist_id=eq.${a.id}`, { method: "DELETE", prefer: "return=minimal" });
+    } catch (e) {
+      if (on && isUniqueErr(e)) return;
     }
   }
 
@@ -2909,8 +2961,12 @@
         if (piece) notePiece(piece, "visit");
       }
     }
-    const fol = e.target.closest("[data-follow]")?.dataset.follow;
-    if (fol) { e.preventDefault(); toggleFollow(fol); return; }
+    const folEl = e.target.closest("[data-follow]");
+    if (folEl) {
+      e.preventDefault();
+      toggleFollow(folEl.dataset.follow, folEl.dataset.followId);
+      return;
+    }
     if (e.target.closest("[data-private]")) {
       e.preventDefault();
       if (!logged()) { needAuth("follow"); return; }
@@ -2929,9 +2985,16 @@
     const region = e.target.closest("[data-region]");
     if (region) { e.preventDefault(); cycleRegion(); return; }
     const chip = e.target.closest("[data-chip]")?.dataset.chip;
-    if (chip) { state.starRegion = chip; render(); return; }
+    if (chip) { state.starRegion = chip; state.starFollowed = false; render(); return; }
     const trend = e.target.closest("[data-trend]")?.dataset.trend;
-    if (trend != null) { state.trending = trend === "1"; render(); return; }
+    if (trend != null) { state.trending = trend === "1"; state.starFollowed = false; render(); return; }
+    if (e.target.closest("[data-star-followed]")) {
+      e.preventDefault();
+      if (!logged()) { needAuth("follow"); return; }
+      state.starFollowed = true;
+      render();
+      return;
+    }
     const searchSort = e.target.closest("[data-search-sort]")?.dataset.searchSort;
     if (searchSort) { state.searchSort = searchSort; render(); return; }
     const tab = e.target.closest("[data-tab]")?.dataset.tab;
