@@ -814,7 +814,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
 }
 .stars-lockup .display-title {
   margin: 10px 0 0;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   line-height: 0.86;
 }
 .stars-count {
