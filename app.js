@@ -78,6 +78,7 @@
       joinFollow: "PROFILE", joinFollowD: "OPEN A PLATE. SET THE NAME. PIN WHAT YOU WEAR.",
       joinArchive: "FOLLOW", joinArchiveD: "FOLLOW ARTISTS. GET A PING WHEN THEY DROP A FIT.",
       joinCulture: "SAVE", joinCultureD: "SAVE FITS. STOCK ALERTS WHEN A PIECE MOVES.",
+      joinPing: "NEW FIT", joinStock: "BACK IN STOCK",
       pieces: "PIECES",
       logIn: "LOG IN", create: "CREATE ACCOUNT", or: "OR",
       apple: "CONTINUE WITH APPLE", google: "CONTINUE WITH GOOGLE", guest: "CONTINUE AS GUEST",
@@ -154,6 +155,7 @@
       joinFollow: "PROFİL", joinFollowD: "PLAKA AÇ. İSİM KOY. GİYDİĞİNİ PIN’LE.",
       joinArchive: "TAKİP", joinArchiveD: "SANATÇILARI TAKİP ET. FIT ATINCA HABERİN OLSUN.",
       joinCulture: "KAYDET", joinCultureD: "FIT KAYDET. STOK VEYA FİYAT KAYINCA BİL.",
+      joinPing: "YENİ FIT", joinStock: "STOKTA",
       pieces: "PARÇA",
       logIn: "GİRİŞ YAP", create: "HESAP OLUŞTUR", or: "VEYA",
       apple: "APPLE İLE DEVAM ET", google: "GOOGLE İLE DEVAM ET", guest: "MİSAFİR OLARAK DEVAM ET",
@@ -1458,11 +1460,42 @@
       <p class="kicker">${t("welcomeKicker")}</p>
       <h1 class="auth-display">${welcomeLines()}</h1>
       <p class="auth-lede">${t("joinDek")}</p>
-      <ol class="auth-index">
-        <li><b>01</b><div><em>${t("joinFollow")}</em><p>${t("joinFollowD")}</p></div></li>
-        <li><b>02</b><div><em>${t("joinArchive")}</em><p>${t("joinArchiveD")}</p></div></li>
-        <li><b>03</b><div><em>${t("joinCulture")}</em><p>${t("joinCultureD")}</p></div></li>
-      </ol>
+      ${opt.back ? "" : `<ol class="auth-index">
+        <li>
+          <div class="feat-head"><b>01</b><div><em>${t("joinFollow")}</em><p>${t("joinFollowD")}</p></div></div>
+          <div class="feat-stage" aria-hidden="true">
+            <article class="feat-plate">
+              <header>${esc(t("plate"))}</header>
+              <div class="feat-plate-mid">
+                <span class="feat-ava"><img src="shots/src/miles.png" alt=""><i>${I.cam}</i></span>
+                <span class="feat-change">${esc(t("changePhoto"))}</span>
+                <strong>MILES</strong>
+              </div>
+            </article>
+          </div>
+        </li>
+        <li>
+          <div class="feat-head"><b>02</b><div><em>${t("joinArchive")}</em><p>${t("joinArchiveD")}</p></div></div>
+          <div class="feat-stage" aria-hidden="true">
+            <div class="feat-follow">
+              <div class="feat-star">
+                <img src="shots/src/ig-rocky.jpg" alt="">
+                <div><strong>A$AP ROCKY</strong><em>${esc(t("following"))}</em></div>
+              </div>
+              <div class="feat-ping"><span>${esc(t("joinPing"))}</span><b>2M</b></div>
+            </div>
+          </div>
+        </li>
+        <li>
+          <div class="feat-head"><b>03</b><div><em>${t("joinCulture")}</em><p>${t("joinCultureD")}</p></div></div>
+          <div class="feat-stage" aria-hidden="true">
+            <div class="feat-save">
+              <div class="feat-fit"><img src="shots/src/loewe-hoodie.jpg" alt=""><i>${I.mark}</i></div>
+              <div class="feat-stock"><em>${esc(t("joinStock"))}</em><strong>LOEWE HOODIE</strong></div>
+            </div>
+          </div>
+        </li>
+      </ol>`}
       <dl class="auth-stats">
         <div><dt>${t("artists")}</dt><dd>${String(nArt || 0).padStart(2, "0")}</dd></div>
         <div><dt>${t("fits")}</dt><dd>${String(nFit || 0).padStart(2, "0")}</dd></div>
