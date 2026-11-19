@@ -51,6 +51,7 @@
       feedSub: "THE ARCHIVE.",
       feedDesc: "LOOKS, DROPS & CULTURE. ALL IN ONE PLACE.",
       feedIndex: "FITS LIVE",
+      starsTitle: "THE STARS",
       starsSub: "DISCOVER ARTISTS.",
       starsDesc: "ARTISTS, THEIR STYLE & THE PIECES THEY WEAR.",
       starsIndex: "IN THE ARCHIVE",
@@ -126,6 +127,7 @@
       feedSub: "THE ARCHIVE.",
       feedDesc: "LOOK’LAR, DROP’LAR VE KÜLTÜR. TEK YERDE.",
       feedIndex: "CANLI FIT",
+      starsTitle: "THE STARS",
       starsSub: "SANATÇILARI KEŞFET.",
       starsDesc: "SANATÇILAR, STİLLERİ VE GİYDİKLERİ PARÇALAR.",
       starsIndex: "ARŞİVDE",
@@ -1349,7 +1351,7 @@
       <header class="stars-mast">
         <div class="stars-lockup">
           <p class="kicker">${t("starsSub")}</p>
-          <h1 class="display-title">${t("stars")}</h1>
+          <h1 class="display-title">${t("starsTitle")}</h1>
         </div>
         <div class="stars-count">
           <b>${String(total).padStart(2, "0")}</b>
