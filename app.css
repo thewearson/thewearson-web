@@ -2049,19 +2049,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
 
 @media (min-width: 861px) {
   .view { padding: 40px 0 96px; }
-  .feed-post {
-    display: grid;
-    grid-template-columns: minmax(0, 585px) minmax(0, 1fr);
-    gap: 0 64px;
-    align-items: start;
-    padding: 72px 0;
-  }
-  .feed-col > .feed-post:first-of-type { padding-top: 24px; }
-  .feed-side {
-    position: sticky;
-    top: calc(var(--bar-h) + 28px);
-    min-width: 0;
-  }
   .stars { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
   .stars-count b { font-size: 92px; }
   .news-card {
@@ -2126,6 +2113,21 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
   .account-stats div,
   .account-stats button { padding: 22px 10px; }
   .account-stats b { font-size: 28px; }
+}
+@media (min-width: 1101px) {
+  .feed-post {
+    display: grid;
+    grid-template-columns: minmax(0, 585px) minmax(0, 1fr);
+    gap: 0 64px;
+    align-items: start;
+    padding: 72px 0;
+  }
+  .feed-col > .feed-post:first-of-type { padding-top: 24px; }
+  .feed-side {
+    position: sticky;
+    top: calc(var(--bar-h) + 28px);
+    min-width: 0;
+  }
 }
 @media (min-width: 1100px) {
   .brand-grid.is-many { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -3477,6 +3479,79 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
     padding: 0 20px;
     gap: 16px;
   }
+  .feed-post {
+    display: flex;
+    flex-direction: column;
+    padding: 32px 0 40px;
+  }
+  .feed-col > .feed-post:first-of-type { padding-top: 8px; }
+  .feed-side { display: contents; }
+  .feed-head {
+    order: 1;
+    margin: 0 0 16px;
+    padding: 0;
+    gap: 14px;
+  }
+  .feed-media {
+    order: 2;
+    max-width: none;
+  }
+  .actions {
+    order: 3;
+    margin-top: 16px;
+  }
+  .feed-archive {
+    order: 4;
+    margin-top: 28px;
+  }
+  .pcard-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 52px;
+    align-items: stretch;
+    border: var(--stroke) solid var(--ink);
+  }
+  .pcard { border: 0; min-width: 0; }
+  .pcard-save {
+    position: static;
+    top: auto;
+    left: auto;
+    width: 100%;
+    height: auto;
+    min-height: 52px;
+    border: 0;
+    border-left: var(--stroke) solid var(--ink);
+  }
+  .pcard-wrap:hover .pcard-save { background: var(--ink); color: var(--paper); }
+  .pcard-wrap:hover .pcard-save.is-on { color: var(--baby); }
+  .stars { gap: 24px; }
+  .star-plate {
+    width: calc(100% - 8px);
+    box-shadow: 8px 8px 0 var(--ink);
+  }
+  .star-plate-copy { padding: 20px 18px 18px; }
+  .star-plate-copy h2 {
+    font-size: clamp(18px, 3.2vw, 24px);
+    letter-spacing: 0.04em;
+  }
+  .stars-regions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: visible;
+    width: 100%;
+  }
+  .stars-regions .chip {
+    flex: none;
+    width: auto;
+    min-height: 48px;
+    height: auto;
+    padding: 14px 10px;
+    border-right: var(--stroke) solid var(--ink);
+    border-bottom: var(--stroke) solid var(--ink);
+  }
+  .stars-regions .chip:nth-child(2n) { border-right: 0; }
+  .stars-regions .chip:last-child { border-bottom: 0; }
+  .stars-regions .chip:nth-child(odd):nth-last-child(2) { border-bottom: 0; }
+  .stars-regions .chip:last-child:nth-child(odd) { grid-column: 1 / -1; border-right: 0; }
   .site-nav,
   .site-tools #btnSearch,
   .site-tools #navJoin { display: none; }
@@ -3518,17 +3593,23 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
   .news-card-copy { padding: 22px 18px 20px; }
   .news-card h2 { font-size: clamp(20px, 6.2vw, 28px); }
   .news-card .dek { margin-top: 12px; }
-  .pcard { grid-template-columns: var(--thumb) minmax(0, 1fr) auto; }
+  .pcard { grid-template-columns: var(--thumb) minmax(0, 1fr); }
   .pcard-pic { width: var(--thumb); min-height: var(--thumb); padding: 10px; }
-  .pcard-copy { padding: 12px 14px; }
+  .pcard-copy { padding: 12px 14px 4px; }
   .pcard-copy em { font-size: 9px; letter-spacing: 0.16em; }
   .pcard-copy strong { font-size: 12px; letter-spacing: 0.035em; line-height: 1.42; }
-  .pcard-price { font-size: 12px; padding: 12px 12px 12px 6px; }
+  .pcard-price {
+    grid-column: 2;
+    justify-self: start;
+    max-width: none;
+    font-size: 12px;
+    padding: 0 14px 12px;
+  }
   .actions { margin-top: 20px; padding-left: 0; padding-right: 0; }
   .actions .act { min-height: 48px; }
-  .feed-archive { margin-top: 24px; }
-  .feed-post { padding: 40px 0; }
-  .feed-head { padding: 0; gap: 14px; }
+  .feed-archive { margin-top: 28px; }
+  .feed-post { padding: 36px 0 44px; }
+  .feed-head { padding: 4px 0 0; gap: 14px; }
   .feed-head > button:first-child,
   .feed-head .ava {
     width: 52px;
@@ -3546,6 +3627,10 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
   }
   .stars-count b { font-size: 64px; }
   .stars-dek { margin-bottom: 24px; letter-spacing: 0.1em; }
+  .stars { gap: 28px; }
+  .star-plate-copy { padding: 22px 20px 20px; }
+  .star-plate-copy h2 { font-size: clamp(20px, 6.4vw, 26px); }
+  .star-meta { margin-top: 18px; padding-top: 14px; font-size: 10px; letter-spacing: 0.16em; }
   .stars-rail { flex-direction: column; gap: 10px; }
   .stars-regions,
   .stars-sort { width: 100%; }
