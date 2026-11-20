@@ -159,8 +159,6 @@
       dropMailNeed: "ENTER YOUR EMAIL.",
       dropMailOk: "ARMED. THE WEARS ON MAILS YOU WHEN THE LOCK OPENS.",
       dropMailFail: "COULD NOT ARM EMAIL. TRY AGAIN.",
-      dropCal: "ADD TO CALENDAR",
-      dropIcsOk: "CALENDAR ALARM READY.",
       dropNotifyOk: "ARMED. WHEN THE LOCK OPENS, THE WEARS ON MAILS YOU FROM THEWEARS.ON@GMAIL.COM.",
       dropNotifyDenied: "MAIL STILL GOES OUT. BROWSER ALERTS ARE BLOCKED.",
       dropShop: "SHOP NOW",
@@ -285,8 +283,6 @@
       dropMailNeed: "E-POSTANI YAZ.",
       dropMailOk: "TAMAM. KİLİT AÇILINCA THE WEARS ON MAIL ATAR.",
       dropMailFail: "E-POSTA KAYDEDİLEMEDİ. TEKRAR DENE.",
-      dropCal: "TAKVİME EKLE",
-      dropIcsOk: "TAKVİM ALARMI HAZIR.",
       dropNotifyOk: "TAMAM. KİLİT AÇILINCA THEWEARS.ON@GMAIL.COM’DAN ÜYE KARTI GELİR.",
       dropNotifyDenied: "MAIL YİNE GİDER. TARAYICI İZNİ KAPALI.",
       dropShop: "ŞİMDİ AL",
@@ -967,12 +963,6 @@
     if (!drop) return null;
     return drop.stores.find((s) => s.id === storeId) || drop.stores[0] || null;
   }
-  function icsEsc(s) {
-    return String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
-  }
-  function icsStamp(d) {
-    return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-  }
   function dropBox(n) {
     const drop = n?.drop;
     if (!drop) return "";
@@ -1006,7 +996,6 @@
       <div class="drop-acts">
         <button class="drop-act ${prefs.notify ? "is-on" : ""}" type="button" data-drop-notify>${prefs.notify ? t("dropNotifying") : t("dropNotify")}</button>
         <button class="drop-act" type="button" data-drop-mail>${t("dropMail")}</button>
-        <a class="drop-act" href="${esc(dropGcalHref(drop))}" target="_blank" rel="noopener" data-drop-ics>${t("dropCal")}</a>
       </div>
     </section>`;
   }
@@ -1290,58 +1279,6 @@
     syncDropChrome();
     armDropWatch();
     snack(armed.ok ? t("dropMailOk") : t("dropMailFail"));
-  }
-  function dropGcalHref(drop) {
-    const start = icsStamp(new Date(drop.at));
-    const end = icsStamp(new Date(new Date(drop.at).getTime() + 60 * 60 * 1000));
-    const details = `${dropWhenLine(drop.at)}\n${dropStoreLines(drop)}\n${dropPageHref(drop)}`;
-    const q = new URLSearchParams({
-      action: "TEMPLATE",
-      text: drop.title,
-      dates: `${start}/${end}`,
-      details,
-      location: dropPageHref(drop),
-    });
-    return `https://calendar.google.com/calendar/render?${q.toString()}`;
-  }
-  function downloadDropIcs(id) {
-    const drop = dropById(id);
-    if (!drop) return;
-    const start = new Date(drop.at);
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
-    const page = dropPageHref(drop);
-    const ics = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//THE WEARS ON//DROP//EN",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-      "BEGIN:VEVENT",
-      `UID:drop-${drop.newsId}@thewearson.com`,
-      `DTSTAMP:${icsStamp(new Date())}`,
-      `DTSTART:${icsStamp(start)}`,
-      `DTEND:${icsStamp(end)}`,
-      `SUMMARY:${icsEsc(drop.title)}`,
-      `DESCRIPTION:${icsEsc(`${dropWhenLine(drop.at)}\n${dropStoreLines(drop)}\n${page}`)}`,
-      `URL:${page}`,
-      "BEGIN:VALARM",
-      "TRIGGER:-PT10M",
-      "ACTION:DISPLAY",
-      "DESCRIPTION:DROP IS LIVE",
-      "END:VALARM",
-      "END:VEVENT",
-      "END:VCALENDAR",
-    ].join("\r\n");
-    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-    const href = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = href;
-    a.download = "THE-WEARS-ON-DROP.ics";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(href), 1500);
-    snack(t("dropIcsOk"));
   }
   function pingDropLogin() {
     const drops = activeDrops();
@@ -3862,6 +3799,7 @@
     if (key === "home") return on ? I.home : I.homeO;
     if (key === "stars") return on ? I.star : I.starO;
     if (key === "news") return on ? I.news : I.newsO;
+    if (key === "join") return on ? I.person : I.personO;
     if (key === "settings") return I.gear;
     return "";
   }
@@ -3892,8 +3830,13 @@
       $("#btnSearch").classList.toggle("is-on", path === "search" || path === "b");
     }
     if ($("#btnSearchDrawer")) {
-      $("#btnSearchDrawer").textContent = state.lang === "tr" ? "ARA" : "SEARCH";
-      $("#btnSearchDrawer").classList.toggle("is-on", path === "search" || path === "b");
+      const btn = $("#btnSearchDrawer");
+      const ico = btn.querySelector(".nav-ico");
+      const lbl = btn.querySelector(".nav-lbl");
+      if (ico) ico.innerHTML = I.search;
+      if (lbl) lbl.textContent = state.lang === "tr" ? "ARA" : "SEARCH";
+      else btn.textContent = state.lang === "tr" ? "ARA" : "SEARCH";
+      btn.classList.toggle("is-on", path === "search" || path === "b");
     }
     if ($("#btnMenu")) $("#btnMenu").textContent = t("menu");
     document.querySelectorAll(".drawer-meta [data-lang]").forEach((el) => {
@@ -4125,13 +4068,6 @@
     if (dropMail) {
       e.preventDefault();
       openDropMail(dropMail.closest("[data-drop]")?.dataset.drop);
-      return;
-    }
-    const dropIcs = e.target.closest("[data-drop-ics]");
-    if (dropIcs) {
-      downloadDropIcs(dropIcs.closest("[data-drop]")?.dataset.drop);
-      if (dropIcs.tagName === "A" && dropIcs.getAttribute("href")) return;
-      e.preventDefault();
       return;
     }
     const dropPick = e.target.closest("[data-drop-pick]");
