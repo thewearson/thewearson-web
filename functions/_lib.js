@@ -201,27 +201,21 @@ function mergeEmails(...lists) {
 async function upsertEmail(env, email, off, newsId) {
   const id = packId(newsId, env);
   await rememberNews(env, id);
-  const stub = dropStub(env);
-  if (stub) {
-    const res = await stub.fetch("https://drop.notify/sub", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, off, newsId: id }),
-    });
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, status: res.status, data };
+  const remote = await rpcDropPut(env, id, email, off);
+  if (!remote.ok) {
+    const msg = String(remote.data?.message || remote.data?.msg || remote.data?.error || "");
+    if (/list full/i.test(msg)) return { ok: false, status: 429, data: { error: "List full." } };
+    if (/could not find|does not exist|schema cache/i.test(msg)) {
+      return { ok: false, status: 503, data: { error: "Notify inbox is not ready." } };
+    }
+    return { ok: false, status: 503, data: { error: "Notify inbox failed." } };
   }
   const pack = await loadPack(env, id);
   const cur = new Set(Array.isArray(pack.emails) ? pack.emails : []);
   if (off) cur.delete(email);
-  else {
-    if (cur.size >= 10000) return { ok: false, status: 429, data: { error: "List full." } };
-    cur.add(email);
-  }
+  else cur.add(email);
   await savePack(env, { ...pack, emails: [...cur] }, id);
-  const remote = await rpcDropPut(env, id, email, off);
-  const n = Number(remote.data && remote.data.n) || cur.size;
-  return { ok: true, status: 200, data: { n } };
+  return { ok: true, status: 200, data: { n: Number(remote.data && remote.data.n) || cur.size } };
 }
 
 async function smtpSend(env, { recipients, subject, text, html, selfOnly, toEmail }) {
@@ -629,7 +623,7 @@ export async function dropNotifyResponse(request, env) {
   const newsId = cleanNewsId(body.newsId, env);
   const out = await upsertEmail(env, email, body.off === true, newsId);
   if (!out.ok) return corsJson(request, out.status, out.data);
-  return corsJson(request, 200, { ok: true, on: body.off !== true, newsId });
+  return corsJson(request, 200, { ok: true, on: body.off !== true, newsId, n: Number(out.data && out.data.n) || 0 });
 }
 
 function sameSecret(a, b) {
@@ -715,6 +709,50 @@ async function sendWave(env, pack, emails, wave, sentStoreIds, newsId) {
 async function sendOneDropMail(env, newsId, opt = {}) {
   const requested = cleanNewsId(newsId, env);
   const id = packId(requested, env);
+  if (opt.batch) {
+    const emails = mergeEmails(opt.emails);
+    const live = await loadLiveDrop(env, requested);
+    const studioIds = (Array.isArray(opt.storeIds) ? opt.storeIds : []).map((s) => String(s || "").trim()).filter(Boolean);
+    const want = new Set(studioIds);
+    const stores = (live.stores || []).filter((s) => want.has(s.id) && s.url);
+    if (!stores.length) return { error: "No matching live store URLs. Save the dispatch first.", newsId: id };
+    if (!emails.length) {
+      return { sent: 0, empty: true, done: true, cursor: Number(opt.cursor || 0), total: Number(opt.total || 0), newsId: id };
+    }
+    const wave = {
+      stores,
+      storeIds: stores.map((s) => s.id),
+      title: live.title,
+      when: live.when,
+      newsId: live.newsId,
+      cursor: 0,
+      done: false,
+      early: true,
+    };
+    const subject = dropMailSubject(stores);
+    const text = dropMailText(wave);
+    const html = dropMailHtml(wave);
+    const hook = await readSecret(env.DROP_MAIL_HOOK);
+    if (hook) {
+      const res = await fetch(hook, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fire: true, emails, html, text, subject, storeIds: wave.storeIds, newsId: id }),
+      });
+      if (!res.ok) throw new Error(`mail hook ${res.status}`);
+    } else {
+      await smtpSend(env, { recipients: emails, subject, text, html });
+    }
+    return {
+      sent: emails.length,
+      cursor: Number(opt.cursor || emails.length),
+      total: Number(opt.total || 0),
+      done: opt.done === true,
+      storeIds: wave.storeIds,
+      newsId: id,
+      early: true,
+    };
+  }
   const pack = await loadPack(env, id);
   const emails = mergeEmails(pack.emails, opt.emails);
   const sentStoreIds = [...new Set((pack.sentStoreIds || []).map(String))];
@@ -838,7 +876,17 @@ export async function dropStudioResponse(request, env) {
   if (!storeIds.length) return corsJson(request, 400, { error: "storeIds required." });
   try {
     const extra = Array.isArray(body.emails) ? body.emails : [];
-    const out = await sendDueDropMail(env, { studio: true, storeIds, again: body.again === true, newsId, emails: extra });
+    const out = await sendDueDropMail(env, {
+      studio: true,
+      storeIds,
+      again: body.again === true,
+      newsId,
+      emails: extra,
+      batch: body.batch === true,
+      cursor: body.cursor,
+      total: body.total,
+      done: body.done === true,
+    });
     const status = out.error ? 400 : 200;
     return corsJson(request, status, { ok: !out.error, ...out });
   } catch (err) {
