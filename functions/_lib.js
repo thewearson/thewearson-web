@@ -467,9 +467,16 @@ function dropMailSubject(stores) {
   return one ? `DROP LOCK OPENED — ${String(one).toUpperCase()}` : "DROP LOCK OPENED — THE WEARS ON";
 }
 
+function dropPathSlug(title, newsId) {
+  const raw = String(title || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const slug = raw.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
+  return slug || String(newsId || "dispatch");
+}
+
 function dropMailText(wave) {
   const newsId = wave.newsId || "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
   const stores = Array.isArray(wave.stores) ? wave.stores : [];
+  const page = `https://thewearson.com/#/n/${dropPathSlug(wave.title, newsId)}`;
   return [
     "THE WEARS ON",
     "",
@@ -480,13 +487,13 @@ function dropMailText(wave) {
     "",
     ...stores.map((s) => `${s.label}: ${s.url}`),
     "",
-    `https://thewearson.com/#/n/${newsId}`,
+    page,
   ].join("\n");
 }
 
 function dropMailHtml(wave) {
   const newsId = wave.newsId || "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
-  const page = "https://thewearson.com/#/n/" + newsId;
+  const page = "https://thewearson.com/#/n/" + dropPathSlug(wave.title, newsId);
   const stores = Array.isArray(wave.stores) ? wave.stores : [];
   const title = escHtml(String(wave.title || "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI").toUpperCase());
   const when = escHtml(wave.when || "20 NOV 2026 · 10:00 AM ET");

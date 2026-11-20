@@ -148,7 +148,7 @@
       dropLive: "DROP LOCK OPENED",
       dropLiveShop: "DROP LOCK OPENED",
       dropAuto: "AUTO-REDIRECT AT DROP",
-      dropAutoD: "AT 10:00 AM ET THE SELECTED STORE OPENS.",
+      dropAutoD: "IF THIS TAB IS OPEN AT DROP TIME, THE SELECTED STORE OPENS.",
       dropDefault: "DEFAULT STORE",
       dropMail: "NOTIFY BY EMAIL",
       dropMailOn: "EMAIL ARMED",
@@ -268,7 +268,7 @@
       dropLive: "DROP LOCK OPENED",
       dropLiveShop: "DROP LOCK OPENED",
       dropAuto: "DROP ANINDA OTOMATİK YÖNLENDİR",
-      dropAutoD: "10:00 AM ET’DE SEÇİLİ MAĞAZA AÇILIR.",
+      dropAutoD: "SEKME AÇIKSA DROP ANINDA SEÇİLİ MAĞAZA AÇILIR.",
       dropDefault: "VARSAYILAN MAĞAZA",
       dropMail: "E-POSTA İLE HABER VER",
       dropMailOn: "E-POSTA KAYITLI",
@@ -425,6 +425,48 @@
   const meId = () => state.me?.id || state.session?.user?.id || "";
   const artistKey = (name) => up(name).replace(/[^A-Z0-9]/g, "");
   const siteOrigin = () => `${location.origin}/`;
+  function slugOf(s) {
+    const raw = String(s || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    return raw.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
+  }
+  function newsSlug(n) {
+    const base = slugOf(n?.title) || "dispatch";
+    const twins = (state.news || []).filter((x) => slugOf(x.title) === slugOf(n.title) && x.id !== n.id);
+    return twins.length ? `${base}-${String(n.id || "").replace(/-/g, "").slice(0, 6)}` : base;
+  }
+  function pieceSlug(p) {
+    const base = slugOf(`${p?.brand || ""} ${p?.name || ""}`.trim()) || "item";
+    const twins = (state.pieces || []).filter((x) => slugOf(`${x.brand} ${x.name}`) === slugOf(`${p.brand} ${p.name}`) && x.id !== p.id);
+    return twins.length ? `${base}-${String(p.id || "").replace(/-/g, "").slice(0, 6)}` : base;
+  }
+  function fitSlug(f) {
+    const base = slugOf(`${f?.artistName || ""} ${f?.title || ""}`.trim()) || slugOf(f?.artistName) || "fit";
+    const twins = (state.fits || []).filter((x) => {
+      const other = slugOf(`${x.artistName || ""} ${x.title || ""}`.trim()) || slugOf(x.artistName);
+      return other === base && x.id !== f.id;
+    });
+    return twins.length ? `${base}-${String(f.id || "").replace(/-/g, "").slice(0, 6)}` : base;
+  }
+  function findNews(id) {
+    const key = String(id || "");
+    if (!key) return null;
+    return (state.news || []).find((n) => n.id === key) || (state.news || []).find((n) => newsSlug(n) === key) || null;
+  }
+  function findPiece(id) {
+    const key = String(id || "");
+    if (!key) return null;
+    return (state.pieces || []).find((p) => p.id === key) || (state.pieces || []).find((p) => pieceSlug(p) === key) || null;
+  }
+  function findFit(id) {
+    const key = String(id || "");
+    if (!key) return null;
+    return (state.fits || []).find((f) => f.id === key) || (state.fits || []).find((f) => fitSlug(f) === key) || null;
+  }
+  function hrefNews(n) { return `#/n/${newsSlug(n)}`; }
+  function hrefStar(name) { return `#/s/${slugOf(name) || "star"}`; }
+  function hrefPiece(p) { return `#/p/${pieceSlug(p)}`; }
+  function hrefFit(f) { return `#/f/${fitSlug(f)}`; }
+  function hrefBrand(brand) { return `#/b/${slugOf(brand) || "brand"}`; }
 
   function nickOf(raw) {
     let s = String(raw || "").trim().toUpperCase();
@@ -1066,6 +1108,12 @@
     if (prefs.notify || opt.toast) dropToast(drop);
     paintDropClock();
   }
+  function fireDueAutos() {
+    const due = activeDrops()
+      .filter((d) => dropRemain(d.at) <= 0 && !dropWasFired(d) && dropPrefs(d).auto)
+      .sort((a, b) => dropRemain(a.at) - dropRemain(b.at));
+    if (due[0]) fireDrop(due[0]);
+  }
   function nextPendingDrop(exceptId) {
     return activeDrops()
       .filter((d) => d.newsId !== exceptId && dropRemain(d.at) > 0)
@@ -1101,7 +1149,10 @@
     const drops = activeDrops();
     paintDropClock();
     if (!drops.length) return;
-    dropTick = window.setInterval(paintDropClock, 250);
+    dropTick = window.setInterval(() => {
+      paintDropClock();
+      fireDueAutos();
+    }, 250);
     const next = drops.slice().sort((a, b) => dropRemain(a.at) - dropRemain(b.at))[0];
     scheduleDrop(next);
     if (!dropWatchBound) {
@@ -2243,7 +2294,7 @@
     if (!stars.length && !brands.length) return `<p class="empty">${t("none")}</p>`;
     const starBlock = stars.length ? `<div class="search-col">
       <p class="search-sec">${t("stars")}</p>
-      ${stars.map((a) => `<button class="search-star" type="button" data-go="#/s/${encodeURIComponent(a.name)}">
+      ${stars.map((a) => `<button class="search-star" type="button" data-go="${hrefStar(a.name)}">
         ${ava(a.imageUrl, a.name)}
         <span class="search-star-copy"><b>${esc(a.name)}</b></span>
         ${a.country ? `<em>${esc(a.country)}</em>` : ""}
@@ -2252,15 +2303,15 @@
     const brandBlock = brands.length ? `<div class="search-col">
       <p class="search-sec">${t("searchBrands")}</p>
       ${brands.map((g) => `
-        <button class="search-brand" type="button" data-go="#/b/${encodeURIComponent(g.brand)}">
+        <button class="search-brand" type="button" data-go="${hrefBrand(g.brand)}">
           ${brandMark(g.brand)}
           <span class="search-brand-copy"><b>${esc(g.brand)}</b><em>${esc(countLabel(g.total))}</em></span>
           ${I.fwd}
         </button>
-        ${g.models.map((p) => `<button class="search-model" type="button" data-go="#/p/${encodeURIComponent(p.id)}">
+        ${g.models.map((p) => `<button class="search-model" type="button" data-go="${hrefPiece(p)}">
           <span>${esc(p.name)}</span><b>${esc(p.price)}</b>
         </button>`).join("")}
-        <button class="search-all" type="button" data-go="#/b/${encodeURIComponent(g.brand)}">${t("viewAll")}</button>
+        <button class="search-all" type="button" data-go="${hrefBrand(g.brand)}">${t("viewAll")}</button>
       `).join("")}
     </div>` : "";
     return `<div class="search-board${stars.length && brands.length ? " is-split" : ""}">${starBlock}${brandBlock}</div>`;
@@ -2301,7 +2352,7 @@
   function archiveCard(p) {
     const on = isPieceSaved(p);
     return `<div class="acard-wrap">
-      <button class="acard" type="button" data-go="#/p/${encodeURIComponent(p.id)}">
+      <button class="acard" type="button" data-go="${hrefPiece(p)}">
         <div class="acard-pic">${p.imageUrl ? `<img src="${esc(p.imageUrl)}" alt="">` : ""}</div>
         <div class="acard-copy">
           <em>${esc(p.brand)}</em>
@@ -2334,7 +2385,7 @@
   function pieceCard(p) {
     const on = isPieceSaved(p);
     return `<div class="pcard-wrap">
-      <button class="pcard" type="button" data-go="#/p/${encodeURIComponent(p.id)}">
+      <button class="pcard" type="button" data-go="${hrefPiece(p)}">
         <div class="pcard-pic">${p.imageUrl ? `<img src="${esc(p.imageUrl)}" alt="">` : ""}</div>
         <div class="pcard-copy">
           <em>${esc(p.brand)}</em>
@@ -2430,10 +2481,10 @@
     const avatars = names.length > 1
       ? `<div class="feed-pair">${names.map((n, i) => {
           const who = i ? b : a;
-          return `<button type="button" data-go="#/s/${encodeURIComponent(n)}">${ava(who?.imageUrl, n)}</button>`;
+          return `<button type="button" data-go="${hrefStar(n)}">${ava(who?.imageUrl, n)}</button>`;
         }).join("")}</div>`
-      : `<button type="button" data-go="#/s/${encodeURIComponent(names[0] || "")}">${ava(a?.imageUrl, names[0])}</button>`;
-    const who = `<p class="feed-name">${names.map((n, i) => `${i ? `<span class="feed-x">×</span>` : ""}<button type="button" data-go="#/s/${encodeURIComponent(n)}">${esc(n)}</button>`).join("")}</p>`;
+      : `<button type="button" data-go="${hrefStar(names[0] || "")}">${ava(a?.imageUrl, names[0])}</button>`;
+    const who = `<p class="feed-name">${names.map((n, i) => `${i ? `<span class="feed-x">×</span>` : ""}<button type="button" data-go="${hrefStar(n)}">${esc(n)}</button>`).join("")}</p>`;
     return `<article class="feed-post">
       <div class="feed-media">
         ${carousel(fit.imageUrls.length ? fit.imageUrls : (fit.imageUrl ? [fit.imageUrl] : []), names.join(" × "), fit.id)}
@@ -2506,7 +2557,7 @@
       ? `<img src="${esc(a.imageUrl)}" alt="">`
       : `<span class="star-plate-mark">${esc(letter)}</span>`;
     const zone = a.region && a.region !== "ALL" ? a.region : "";
-    return `<button class="star-plate" type="button" data-go="#/s/${encodeURIComponent(a.name)}">
+    return `<button class="star-plate" type="button" data-go="${hrefStar(a.name)}">
       <div class="star-plate-pic">${pic}</div>
       <div class="star-plate-copy">
         <p class="kicker">${esc(a.country || zone)}</p>
@@ -2565,7 +2616,7 @@
       </header>
       <p class="stars-dek">${t("newsDesc")}</p>
       ${!state.ready ? `<p class="empty">${t("connecting")}</p>` : rows.length ? rows.map((n) => `
-        <a class="news-card" href="#/n/${encodeURIComponent(n.id)}">
+        <a class="news-card" href="${hrefNews(n)}">
           ${n.imageUrl ? `<div class="news-cover">${imgTag(n.imageUrl, n.title, `class="${newsPlateClass(n.imageUrl)}"`)}</div>` : `<div class="news-cover"></div>`}
           <div class="news-card-copy">
             <div class="news-card-meta"><span class="tag">${esc(n.category)}</span><time>${esc(ago(n.createdAt))}</time></div>
@@ -2725,7 +2776,7 @@
         <div class="acc-list">
           ${followed.length ? followed.map((n) => {
             const a = artistByName(n);
-            return `<button class="followed-row" type="button" data-go="#/s/${encodeURIComponent(n)}">${ava(a?.imageUrl, n, "ava")}<span>${esc(n)}</span>${I.fwd}</button>`;
+            return `<button class="followed-row" type="button" data-go="${hrefStar(n)}">${ava(a?.imageUrl, n, "ava")}<span>${esc(n)}</span>${I.fwd}</button>`;
           }).join("") : `<p class="empty">${t("noFollow")}</p>`}
         </div>
       </section>
@@ -2794,7 +2845,7 @@
           <div class="acc-list">
             ${followed.length ? followed.map((n) => {
               const a = artistByName(n);
-              return `<button class="followed-row" type="button" data-go="#/s/${encodeURIComponent(n)}">${ava(a?.imageUrl, n, "ava")}<span>${esc(n)}</span>${I.fwd}</button>`;
+              return `<button class="followed-row" type="button" data-go="${hrefStar(n)}">${ava(a?.imageUrl, n, "ava")}<span>${esc(n)}</span>${I.fwd}</button>`;
             }).join("") : `<p class="empty">${t("noFollow")}</p>`}
           </div>
         </section>
@@ -2844,7 +2895,7 @@
 
   function savedFitCard(f) {
     const guest = f.guestArtistName && f.guestArtistName !== f.artistName ? f.guestArtistName : "";
-    return `<button class="saved-fit" type="button" data-go="#/f/${encodeURIComponent(f.id)}">
+    return `<button class="saved-fit" type="button" data-go="${hrefFit(f)}">
       <div class="saved-fit-pic">${f.imageUrl ? `<img src="${esc(f.imageUrl)}" alt="">` : ""}</div>
       <div class="saved-fit-copy">
         <em>${esc(guest ? `${f.artistName} × ${guest}` : f.artistName || "")}</em>
@@ -2927,13 +2978,13 @@
         <div><em>${t("fits")}</em><b>${fits.length}</b></div>
       </div>
       <div class="grid3">${fits.map((f) => `
-        <button type="button" data-go="#/f/${encodeURIComponent(f.id)}">${f.imageUrl ? `<img src="${esc(f.imageUrl)}" alt="">` : ""}</button>
+        <button type="button" data-go="${hrefFit(f)}">${f.imageUrl ? `<img src="${esc(f.imageUrl)}" alt="">` : ""}</button>
       `).join("")}</div>
     `;
   }
 
   function fitPage(id) {
-    const fit = state.fits.find((f) => f.id === id);
+    const fit = findFit(id);
     if (!fit) return `<p class="empty">${t("none")}</p>`;
     return `<div class="feed-col"><div class="back-row"><button class="sq" type="button" data-go="#/">${I.back}</button></div>${feedPost(fit)}</div>`;
   }
@@ -3206,7 +3257,7 @@
     }).slice(0, 8);
   }
   function piecePage(id) {
-    const p = state.pieces.find((x) => x.id === id);
+    const p = findPiece(id);
     if (!p) return `<p class="empty">${t("none")}</p>`;
     const status = pieceAvail(p);
     const can = status === "in_stock";
@@ -3221,7 +3272,7 @@
           <div class="product-pic">${p.imageUrl ? `<img src="${esc(p.imageUrl)}" alt="">` : ""}</div>
           <div class="product-info">
             <button class="sq product-back" type="button" data-back>${I.back}</button>
-            <button class="brand" type="button" data-go="#/b/${encodeURIComponent(p.brand)}">${esc(p.brand)}</button>
+            <button class="brand" type="button" data-go="${hrefBrand(p.brand)}">${esc(p.brand)}</button>
             <div class="product-row"><h1>${esc(p.name)}</h1><b>${esc(p.price)}</b></div>
             ${p.colorway && !p.colorway.includes("#") ? `<p class="kicker product-color">${esc(p.colorway)}</p>` : ""}
             ${!can ? `<p class="kicker product-status">${esc(availLabel(status))}</p>` : ""}
@@ -3258,7 +3309,7 @@
     </div>`;
   }
   function newsPage(id) {
-    const n = state.news.find((x) => x.id === id);
+    const n = findNews(id);
     if (!n) return `<p class="empty">${t("none")}</p>`;
     const dek = (n.dek || "").trim();
     const body = (n.body || "").trim();
@@ -3914,6 +3965,37 @@
     paintChrome();
     armDropWatch();
     syncDropChrome(view);
+    polishRoute();
+  }
+
+  function polishRoute() {
+    if (!state.ready) return;
+    const url = new URL(location.href);
+    let dirty = false;
+    if (url.searchParams.has("v")) {
+      url.searchParams.delete("v");
+      dirty = true;
+    }
+    const { path, id } = hash();
+    let pretty = "";
+    if (path === "n") {
+      const n = findNews(id);
+      if (n) pretty = hrefNews(n);
+    } else if (path === "s") {
+      const a = artistByName(id);
+      if (a) pretty = hrefStar(a.name);
+    } else if (path === "p") {
+      const p = findPiece(id);
+      if (p) pretty = hrefPiece(p);
+    } else if (path === "f") {
+      const f = findFit(id);
+      if (f) pretty = hrefFit(f);
+    } else if (path === "b" && id) pretty = hrefBrand(id);
+    if (pretty && url.hash !== pretty) {
+      url.hash = pretty;
+      dirty = true;
+    }
+    if (dirty) history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
   function cycleRegion() {
@@ -4134,7 +4216,7 @@
       showSheet(`
         <div class="sheet-head"><span></span><p>${esc(more)}</p><button type="button" data-close aria-label="${t("close")}">${I.close}</button></div>
         <div class="sheet-list">
-          <button class="sheet-row" type="button" data-go="#/s/${encodeURIComponent(more)}"><span>${esc(more)}</span>${I.fwd}</button>
+          <button class="sheet-row" type="button" data-go="${hrefStar(more)}"><span>${esc(more)}</span>${I.fwd}</button>
           <button class="sheet-row" type="button" data-close><span>${state.lang === "tr" ? "KAPAT" : "CLOSE"}</span></button>
         </div>
       `);
