@@ -1220,23 +1220,29 @@
     const addr = String(email || "").trim().toLowerCase();
     if (!off && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) return { ok: false, need: true };
     if (addr) dropLs("tw.drop.email", addr);
-    try {
-      const res = await fetch(DROP_NOTIFY_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: addr,
-          newsId: drop.newsId,
-          at: drop.at,
-          off: !!off,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return { ok: false, error: data.error || "fail" };
-      return { ok: true };
-    } catch {
-      return { ok: false, error: "net" };
+    let last = { ok: false, error: "net" };
+    for (let i = 0; i < 4; i += 1) {
+      try {
+        const res = await fetch(DROP_NOTIFY_API, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: addr,
+            newsId: drop.newsId,
+            at: drop.at,
+            off: !!off,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) return { ok: true, n: Number(data.n) || 0 };
+        last = { ok: false, error: data.error || "fail" };
+        if (res.status < 500 && res.status !== 429) return last;
+      } catch {
+        last = { ok: false, error: "net" };
+      }
+      await new Promise((ok) => setTimeout(ok, 250 * (i + 1)));
     }
+    return last;
   }
   function openDropMail(id) {
     const drop = dropById(id);
@@ -1264,8 +1270,8 @@
     const addr = String(email || "").trim();
     if (!drop || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) { snack(t("dropMailNeed")); return; }
     dropLs("tw.drop.email", addr);
-    writeDropPref(drop, "notify", true);
     const armed = await armDropMail(drop, addr, false);
+    if (armed.ok) writeDropPref(drop, "notify", true);
     hideSheet();
     syncDropChrome();
     armDropWatch();

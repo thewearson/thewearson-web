@@ -41,7 +41,7 @@ function corsHeaders(request) {
   const allow = /^https:\/\/(www\.)?thewearson\.com$/.test(origin)
     || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin)
     ? origin
-    : "https://thewearson.com";
+    : "*";
   return {
     "Access-Control-Allow-Origin": allow,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -177,21 +177,28 @@ async function savePack(env, pack, newsId) {
 }
 
 async function rpcDropPut(env, pack, email, off) {
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/rpc/wears_drop_notify_put`, {
-      method: "POST",
-      headers: {
-        apikey: SB_KEY,
-        Authorization: `Bearer ${SB_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_pack: pack, p_email: email, p_off: !!off }),
-    });
-    const data = await r.json().catch(() => ({}));
-    return { ok: r.ok, data };
-  } catch {
-    return { ok: false, data: {} };
+  let last = { ok: false, data: {} };
+  for (let i = 0; i < 4; i += 1) {
+    try {
+      const r = await fetch(`${SB_URL}/rest/v1/rpc/wears_drop_notify_put`, {
+        method: "POST",
+        headers: {
+          apikey: SB_KEY,
+          Authorization: `Bearer ${SB_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ p_pack: pack, p_email: email, p_off: !!off }),
+      });
+      const data = await r.json().catch(() => ({}));
+      last = { ok: r.ok, data };
+      if (r.ok) return last;
+      if (r.status < 500 && r.status !== 429) return last;
+    } catch {
+      last = { ok: false, data: {} };
+    }
+    await new Promise((ok) => setTimeout(ok, 200 * (i + 1)));
   }
+  return last;
 }
 
 function mergeEmails(...lists) {
@@ -200,7 +207,6 @@ function mergeEmails(...lists) {
 
 async function upsertEmail(env, email, off, newsId) {
   const id = packId(newsId, env);
-  await rememberNews(env, id);
   const remote = await rpcDropPut(env, id, email, off);
   if (!remote.ok) {
     const msg = String(remote.data?.message || remote.data?.msg || remote.data?.error || "");
@@ -210,12 +216,7 @@ async function upsertEmail(env, email, off, newsId) {
     }
     return { ok: false, status: 503, data: { error: "Notify inbox failed." } };
   }
-  const pack = await loadPack(env, id);
-  const cur = new Set(Array.isArray(pack.emails) ? pack.emails : []);
-  if (off) cur.delete(email);
-  else cur.add(email);
-  await savePack(env, { ...pack, emails: [...cur] }, id);
-  return { ok: true, status: 200, data: { n: Number(remote.data && remote.data.n) || cur.size } };
+  return { ok: true, status: 200, data: { n: Number(remote.data && remote.data.n) || 0 } };
 }
 
 async function smtpDeliver(env, { recipients, subject, text, html, selfOnly, toEmail }) {
@@ -616,18 +617,8 @@ function dropMailHtml(wave) {
 </html>`;
 }
 
-export async function inboxSignup(env, email) {
-  const addr = cleanEmail(email);
-  if (!addr) return;
-  const pass = (await readSecret(env.GMAIL_APP_PASSWORD)).replace(/\s+/g, "");
-  if (!pass) return;
-  await smtpSend(env, {
-    recipients: [],
-    selfOnly: true,
-    subject: `DROP NOTIFY · ${addr}`,
-    text: `ARMED\n${addr}\nDROP LOCK OPENED`,
-    html: `<div style="font-family:Arial,Helvetica,sans-serif;font-weight:900;letter-spacing:1px">ARMED<br>${addr}<br>DROP LOCK OPENED</div>`,
-  });
+export async function inboxSignup() {
+  return;
 }
 
 export async function dropNotifyResponse(request, env) {
@@ -726,6 +717,7 @@ async function sendWave(env, pack, emails, wave, sentStoreIds, newsId) {
 async function sendOneDropMail(env, newsId, opt = {}) {
   const requested = cleanNewsId(newsId, env);
   const id = packId(requested, env);
+  if (!opt.batch) return { skipped: true, newsId: id };
   if (opt.batch) {
     const emails = mergeEmails(opt.emails);
     const live = await loadLiveDrop(env, requested);
@@ -846,15 +838,7 @@ export async function sendDueDropMail(env, opt = {}) {
 export async function dropTickResponse(request, env) {
   if (request.method === "OPTIONS") return preflight(request);
   if (request.method !== "POST") return corsJson(request, 405, { error: "POST only." });
-  let body = {};
-  try { body = await request.json(); } catch { body = {}; }
-  try {
-    const newsId = body.newsId ? cleanNewsId(body.newsId, env) : "";
-    const out = await sendDueDropMail(env, { live: body.live === true, newsId: newsId || undefined });
-    return corsJson(request, 200, { ok: true, ...out });
-  } catch (err) {
-    return corsJson(request, 500, { error: String(err && err.message || err) });
-  }
+  return corsJson(request, 200, { ok: true, skipped: true });
 }
 
 export async function dropStudioResponse(request, env) {
