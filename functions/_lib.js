@@ -218,7 +218,7 @@ async function upsertEmail(env, email, off, newsId) {
   return { ok: true, status: 200, data: { n: Number(remote.data && remote.data.n) || cur.size } };
 }
 
-async function smtpSend(env, { recipients, subject, text, html, selfOnly, toEmail }) {
+async function smtpDeliver(env, { recipients, subject, text, html, selfOnly, toEmail }) {
   const user = String(env.GMAIL_USER || "thewears.on@gmail.com").trim();
   const pass = (await readSecret(env.GMAIL_APP_PASSWORD)).replace(/\s+/g, "");
   if (!pass) throw new Error("GMAIL_APP_PASSWORD missing");
@@ -263,10 +263,12 @@ async function smtpSend(env, { recipients, subject, text, html, selfOnly, toEmai
     if (r.code !== 250) throw new Error(r.line);
     r = await cmd(`RCPT TO:<${user}>`);
     if (r.code !== 250) throw new Error(r.line);
+    let accepted = 0;
     for (const to of toList) {
       r = await cmd(`RCPT TO:<${to}>`);
-      if (r.code !== 250 && r.code !== 251) throw new Error(`${to}: ${r.line}`);
+      if (r.code === 250 || r.code === 251) accepted += 1;
     }
+    if (!selfOnly && !accepted) throw new Error("No valid recipients.");
     r = await cmd("DATA");
     if (r.code !== 354) throw new Error(r.line);
     const payload = [
@@ -284,12 +286,27 @@ async function smtpSend(env, { recipients, subject, text, html, selfOnly, toEmai
     r = await readReply();
     if (r.code !== 250) throw new Error(r.line);
     await cmd("QUIT");
-    return { ok: true, sent: toList.length };
+    return { ok: true, sent: selfOnly ? 0 : accepted };
   } finally {
     try { reader.releaseLock(); } catch { /* ignore */ }
     try { await writer.close(); } catch { /* ignore */ }
     try { socket.close(); } catch { /* ignore */ }
   }
+}
+
+async function smtpSend(env, opt) {
+  let last;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      return await smtpDeliver(env, opt);
+    } catch (err) {
+      last = err;
+      const msg = String(err && err.message || err);
+      if (attempt === 3 || !/421|454|timeout|SMTP closed|temporarily|rate/i.test(msg)) throw err;
+      await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
+    }
+  }
+  throw last;
 }
 
 const SB_URL = "https://ctldtidtnvctxoquextm.supabase.co";
