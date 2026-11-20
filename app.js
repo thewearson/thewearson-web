@@ -1,6 +1,7 @@
 (() => {
   const SB = "https://ctldtidtnvctxoquextm.supabase.co";
   const KEY = "sb_publishable_t3zzhT3K_iR0FWuFCA4-Ow_Rdn8zsQk";
+  const GOOGLE_WEB = "774448618794-tgp8r4biip47li8771pjorfi2vjbv848.apps.googleusercontent.com";
   const DROP_HOST = /thewearson\.com$/i.test(location.hostname) ? "" : "https://thewearson.com";
   const DROP_NOTIFY_API = `${DROP_HOST}/api/drop-notify`;
   const DROP_TICK_API = `${DROP_HOST}/api/drop-tick`;
@@ -3647,17 +3648,116 @@
   function oauthFailCopy(raw) {
     const msg = decodeURIComponent(String(raw || "").replace(/\+/g, " ")).toLowerCase();
     if (/missing oauth secret|unsupported provider/.test(msg)) return t("errAppleWeb");
-    if (/access_denied|forbidden|not verified|hasn.?t been verified|testing/.test(msg)) return t("errGoogle");
+    if (/access_denied|forbidden|not verified|hasn.?t been verified|testing|origin is not allowed/.test(msg)) return t("errGoogle");
     return t("errAuth");
+  }
+
+  async function sha256Hex(value) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  function storePkce(verifier) {
+    try { localStorage.setItem("tw.pkce", verifier); } catch { /* private */ }
+    try { sessionStorage.setItem("tw.pkce", verifier); } catch { /* private */ }
+    try { document.cookie = `tw_pkce=${verifier}; Path=/; Max-Age=600; SameSite=Lax; Secure`; } catch { /* private */ }
+  }
+
+  function readPkce() {
+    try {
+      const m = document.cookie.match(/(?:^|; )tw_pkce=([^;]+)/);
+      if (m) return decodeURIComponent(m[1]);
+    } catch { /* private */ }
+    try { return localStorage.getItem("tw.pkce") || sessionStorage.getItem("tw.pkce") || ""; } catch { return ""; }
+  }
+
+  function clearPkce() {
+    try { localStorage.removeItem("tw.pkce"); } catch { /* private */ }
+    try { sessionStorage.removeItem("tw.pkce"); } catch { /* private */ }
+    try { document.cookie = "tw_pkce=; Path=/; Max-Age=0; SameSite=Lax; Secure"; } catch { /* private */ }
+  }
+
+  function loadGsi() {
+    if (window.google?.accounts?.id) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const ok = () => window.google?.accounts?.id ? resolve() : reject(new Error("gsi"));
+      const found = document.querySelector("script[src*='accounts.google.com/gsi/client']");
+      if (found) {
+        found.addEventListener("load", ok, { once: true });
+        found.addEventListener("error", () => reject(new Error("gsi")), { once: true });
+        setTimeout(ok, 2500);
+        return;
+      }
+      const s = document.createElement("script");
+      s.src = "https://accounts.google.com/gsi/client";
+      s.async = true;
+      s.onload = ok;
+      s.onerror = () => reject(new Error("gsi"));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function applyGoogleIdToken(idToken, nonce) {
+    const body = { provider: "google", id_token: idToken };
+    if (nonce) body.nonce = nonce;
+    const data = await auth("token?grant_type=id_token", body);
+    saveSession(data);
+    try { sessionStorage.removeItem("tw.google.nonce"); } catch { /* private */ }
+    await afterAuth(undefined, { pingDrop: true });
+    go("#/");
+  }
+
+  async function handleGoogleCredential(response) {
+    const idToken = response?.credential;
+    if (!idToken) {
+      state.authErr = t("errGoogle");
+      render();
+      return;
+    }
+    let nonce = "";
+    try { nonce = sessionStorage.getItem("tw.google.nonce") || ""; } catch { /* private */ }
+    try {
+      await applyGoogleIdToken(idToken, nonce);
+    } catch (e) {
+      try {
+        await applyGoogleIdToken(idToken, "");
+      } catch {
+        state.authErr = oauthFailCopy(e?.message || e?.data?.error_description || e?.data?.msg);
+        render();
+      }
+    }
+  }
+
+  async function startGoogle() {
+    state.authErr = "";
+    try {
+      const rawNonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+      const hashedNonce = await sha256Hex(rawNonce);
+      try { sessionStorage.setItem("tw.google.nonce", rawNonce); } catch { /* private */ }
+      await loadGsi();
+      const g = window.google.accounts.id;
+      g.initialize({
+        client_id: GOOGLE_WEB,
+        callback: handleGoogleCredential,
+        nonce: hashedNonce,
+        context: "signin",
+        ux_mode: "popup",
+        use_fedcm_for_prompt: true,
+        itp_support: true,
+      });
+      g.prompt((n) => {
+        if (logged()) return;
+        if (n?.isNotDisplayed?.() || n?.isSkippedMoment?.()) startOAuth("google");
+      });
+    } catch {
+      startOAuth("google");
+    }
   }
 
   async function startOAuth(provider) {
     const rand = crypto.getRandomValues(new Uint8Array(32));
     const verifier = btoa(String.fromCharCode(...rand)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-    try {
-      localStorage.setItem("tw.pkce", verifier);
-      sessionStorage.setItem("tw.pkce", verifier);
-    } catch { /* private */ }
+    storePkce(verifier);
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
     const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
     const redirect = `${location.origin}/`;
@@ -3678,9 +3778,9 @@
 
   function stripAuthUrl() {
     const url = new URL(location.href);
-    ["code", "error", "error_description", "error_code", "state", "token", "token_hash", "type"].forEach((k) => url.searchParams.delete(k));
+    ["code", "error", "error_description", "error_code", "state", "token", "token_hash", "type", "id_token"].forEach((k) => url.searchParams.delete(k));
     const hash = url.hash || "";
-    if (hash.includes("access_token=") || hash.includes("error=")) url.hash = "";
+    if (hash.includes("access_token=") || hash.includes("id_token=") || hash.includes("error=")) url.hash = "";
     else if (hash.includes("?")) url.hash = hash.split("?")[0];
     history.replaceState({}, "", url.pathname + url.search + (url.hash.startsWith("#/") ? url.hash : ""));
   }
@@ -3688,16 +3788,36 @@
   async function finishOAuth() {
     const q = authQuery();
     const rawHash = (location.hash || "").replace(/^#/, "");
-    const hashBits = rawHash.includes("access_token=") || rawHash.includes("refresh_token=") || rawHash.includes("error=")
+    const hashBits = /access_token=|refresh_token=|id_token=|error=|(?:^|&)code=/.test(rawHash)
       ? new URLSearchParams(rawHash)
       : new URLSearchParams();
     const err = q.get("error_description") || q.get("error") || hashBits.get("error_description") || hashBits.get("error");
     const access = hashBits.get("access_token");
-    const code = q.get("code");
-    if (err && !access && !code) {
+    const idToken = hashBits.get("id_token") || q.get("id_token");
+    const code = q.get("code") || hashBits.get("code");
+    if (err && !access && !code && !idToken) {
       stripAuthUrl();
       state.authErr = oauthFailCopy(err);
       return "join";
+    }
+    if (idToken && !access && !code) {
+      let nonce = "";
+      try { nonce = sessionStorage.getItem("tw.google.nonce") || ""; } catch { /* private */ }
+      try {
+        const body = { provider: "google", id_token: idToken };
+        if (nonce) body.nonce = nonce;
+        let data;
+        try { data = await auth("token?grant_type=id_token", body); }
+        catch { data = await auth("token?grant_type=id_token", { provider: "google", id_token: idToken }); }
+        saveSession(data);
+        stripAuthUrl();
+        await afterAuth(undefined, { pingDrop: true });
+        return "home";
+      } catch (e) {
+        stripAuthUrl();
+        state.authErr = oauthFailCopy(e?.message || e?.data?.error_description || e?.data?.msg);
+        return "join";
+      }
     }
     if (access) {
       saveSession({
@@ -3712,17 +3832,20 @@
       return kind === "recovery" || kind === "signup" || kind === "email" ? "account" : "home";
     }
     if (code) {
-      const verifier = localStorage.getItem("tw.pkce") || sessionStorage.getItem("tw.pkce") || "";
+      const verifier = readPkce();
       try {
         let data;
         try {
           data = await auth("token?grant_type=pkce", { auth_code: code, code_verifier: verifier });
         } catch {
-          data = await auth("token?grant_type=authorization_code", { code, code_verifier: verifier });
+          try {
+            data = await auth("token?grant_type=pkce", { code, code_verifier: verifier });
+          } catch {
+            data = await auth("token?grant_type=authorization_code", { auth_code: code, code, code_verifier: verifier });
+          }
         }
         saveSession(data);
-        localStorage.removeItem("tw.pkce");
-        sessionStorage.removeItem("tw.pkce");
+        clearPkce();
         stripAuthUrl();
         await afterAuth(undefined, { pingDrop: true });
         return "home";
@@ -4215,6 +4338,7 @@
     }
     if (e.target.closest("[data-pick-photo]")) { $("#avatarFile")?.click(); return; }
     const oauth = e.target.closest("[data-oauth]")?.dataset.oauth;
+    if (oauth === "google") { e.preventDefault(); startGoogle(); return; }
     if (oauth) { e.preventDefault(); startOAuth(oauth); return; }
     if (e.target.closest("[data-forgot]")) {
       e.preventDefault();
