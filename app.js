@@ -1,6 +1,9 @@
 (() => {
   const SB = "https://ctldtidtnvctxoquextm.supabase.co";
   const KEY = "sb_publishable_t3zzhT3K_iR0FWuFCA4-Ow_Rdn8zsQk";
+  const DROP_HOST = /thewearson\.com$/i.test(location.hostname) ? "" : "https://thewearson.com";
+  const DROP_NOTIFY_API = `${DROP_HOST}/api/drop-notify`;
+  const DROP_TICK_API = `${DROP_HOST}/api/drop-tick`;
 
   const svg = (d) => `<svg viewBox="0 0 24 24"><path d="${d}"/></svg>`;
   const I = {
@@ -147,18 +150,19 @@
       dropAuto: "AUTO-REDIRECT AT DROP",
       dropAutoD: "AT 10:00 AM ET THE SELECTED STORE OPENS.",
       dropDefault: "DEFAULT STORE",
-      dropNotify: "NOTIFY ME ON SITE",
+      dropNotify: "NOTIFY ME",
       dropNotifying: "NOTIFYING",
-      dropMail: "EMAIL REMINDER",
-      dropMailD: "GMAIL OPENS A DRAFT TO YOUR INBOX. HIT SEND. THE SITE CANNOT SEND THIS MAIL FOR YOU YET.",
-      dropMailGo: "OPEN GMAIL DRAFT",
+      dropMail: "EMAIL FOR NOTIFY",
+      dropMailD: "AT 18:00 TSİ THE WEARS ON MAILS YOU FROM THEWEARS.ON@GMAIL.COM. TAB CLOSED — YOU STILL GET THE MAIL.",
+      dropMailGo: "ARM EMAIL",
       dropMailApp: "OPEN MAIL APP",
       dropMailNeed: "ENTER YOUR EMAIL.",
-      dropMailOk: "DRAFT OPENED. HIT SEND.",
+      dropMailOk: "ARMED. WE MAIL YOU AT DROP FROM THE WEARS ON.",
+      dropMailFail: "COULD NOT ARM EMAIL. TRY AGAIN.",
       dropCal: "ADD TO CALENDAR",
       dropIcsOk: "CALENDAR ALARM READY.",
-      dropNotifyOk: "WE’LL PING THIS TAB AT DROP. KEEP IT OPEN.",
-      dropNotifyDenied: "SITE TOAST STAYS ON. BROWSER ALERTS ARE BLOCKED.",
+      dropNotifyOk: "WE MAIL YOU AT 18:00 TSİ FROM THEWEARS.ON@GMAIL.COM. THIS TAB ALSO PINGS IF IT STAYS OPEN.",
+      dropNotifyDenied: "MAIL STILL GOES OUT. BROWSER ALERTS ARE BLOCKED.",
       dropShop: "SHOP NOW",
       legalFooter: "© 2027 RACKSGRID",
       country: "COUNTRY", regionOpt: "CONTENT REGION (OPTIONAL)",
@@ -272,18 +276,19 @@
       dropAuto: "DROP ANINDA OTOMATİK YÖNLENDİR",
       dropAutoD: "10:00 AM ET’DE SEÇİLİ MAĞAZA AÇILIR.",
       dropDefault: "VARSAYILAN MAĞAZA",
-      dropNotify: "SİTEDE HABER VER",
+      dropNotify: "HABER VER",
       dropNotifying: "HABER AÇIK",
-      dropMail: "E-POSTA HATIRLATICI",
-      dropMailD: "GMAIL’DE KENDİ ADRESİNE TASLAK AÇILIR. GÖNDER’E BAS. SİTE BU MAİLİ ŞİMDİLİK SENİN YERİNE ATAMIYOR.",
-      dropMailGo: "GMAIL TASLAĞINI AÇ",
+      dropMail: "E-POSTA ADRESİ",
+      dropMailD: "18:00 TSİ’DE THE WEARS ON, THEWEARS.ON@GMAIL.COM’DAN MAIL ATAR. SEKME KAPALI OLSA DA GELİR.",
+      dropMailGo: "E-POSTAYI KAYDET",
       dropMailApp: "MAIL UYGULAMASI",
       dropMailNeed: "E-POSTANI YAZ.",
-      dropMailOk: "TASLAK AÇILDI. GÖNDER’E BAS.",
+      dropMailOk: "TAMAM. DROP ANINDA THE WEARS ON MAIL ATAR.",
+      dropMailFail: "E-POSTA KAYDEDİLEMEDİ. TEKRAR DENE.",
       dropCal: "TAKVİME EKLE",
       dropIcsOk: "TAKVİM ALARMI HAZIR.",
-      dropNotifyOk: "DROP ANINDA BU SEKMEDE PİNG. SEKMEYİ AÇIK TUT.",
-      dropNotifyDenied: "SİTE BİLDİRİMİ AÇIK. TARAYICI İZNİ KAPALI.",
+      dropNotifyOk: "18:00 TSİ’DE THEWEARS.ON@GMAIL.COM’DAN MAIL GİDER. SEKME AÇIKSA BURADA DA PİNG VAR.",
+      dropNotifyDenied: "MAIL YİNE GİDER. TARAYICI İZNİ KAPALI.",
       dropShop: "ŞİMDİ AL",
       legalFooter: "© 2027 RACKSGRID",
       country: "ÜLKE", regionOpt: "İÇERİK BÖLGESİ (OPSİYONEL)",
@@ -983,8 +988,12 @@
       </div>`;
     document.body.appendChild(el);
   }
+  function pingDropMailFire() {
+    fetch(DROP_TICK_API, { method: "POST", keepalive: true }).catch(() => {});
+  }
   function fireDrop(drop, opt = {}) {
     if (!drop) return;
+    pingDropMailFire();
     const prefs = dropPrefs(drop);
     if (dropWasFired(drop) && !opt.force) return;
     markDropFired(drop);
@@ -1002,6 +1011,7 @@
   function scheduleDrop(drop) {
     const ms = dropRemain(drop.at);
     if (ms <= 0) {
+      pingDropMailFire();
       const prefs = dropPrefs(drop);
       if (!dropWasFired(drop) && (prefs.notify || prefs.auto || hash().path === "n")) {
         fireDrop(drop, { toast: prefs.notify || hash().path === "n" });
@@ -1066,12 +1076,25 @@
     const drop = dropById(id);
     if (!drop) return;
     const on = !dropPrefs(drop).notify;
-    writeDropPref(drop, "notify", on);
-    if (on && typeof Notification !== "undefined" && Notification.permission === "default") {
-      try { await Notification.requestPermission(); } catch { /* ignore */ }
+    if (on) {
+      const email = accountEmail();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        openDropMail(id);
+        return;
+      }
+      writeDropPref(drop, "notify", true);
+      const armed = await armDropMail(drop, email, false);
+      if (typeof Notification !== "undefined" && Notification.permission === "default") {
+        try { await Notification.requestPermission(); } catch { /* ignore */ }
+      }
+      if (!armed.ok) snack(t("dropMailFail"));
+      else if (typeof Notification !== "undefined" && Notification.permission === "denied") snack(t("dropNotifyDenied"));
+      else snack(t("dropNotifyOk"));
+    } else {
+      writeDropPref(drop, "notify", false);
+      const email = accountEmail();
+      if (email) await armDropMail(drop, email, true);
     }
-    if (on && typeof Notification !== "undefined" && Notification.permission === "denied") snack(t("dropNotifyDenied"));
-    else if (on) snack(t("dropNotifyOk"));
     syncDropChrome();
     armDropWatch();
   }
@@ -1112,30 +1135,27 @@
   function accountEmail() {
     return String(state.me?.email || state.session?.user?.email || dropLs("tw.drop.email") || "").trim();
   }
-  function dropMailHref(drop, email) {
-    const { subject, body } = dropMailCopy(drop);
-    const to = encodeURIComponent(String(email || "").trim());
-    return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  }
-  function dropGmailHref(drop, email) {
-    const { subject, body } = dropMailCopy(drop);
-    const q = new URLSearchParams({
-      view: "cm",
-      fs: "1",
-      to: String(email || "").trim(),
-      su: subject,
-      body,
-    });
-    return `https://mail.google.com/mail/?${q.toString()}`;
-  }
-  function openOut(href, blank) {
-    if (!href) return;
-    const a = document.createElement("a");
-    a.href = href;
-    if (blank) { a.target = "_blank"; a.rel = "noopener"; }
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  async function armDropMail(drop, email, off) {
+    const addr = String(email || "").trim().toLowerCase();
+    if (!off && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) return { ok: false, need: true };
+    if (addr) dropLs("tw.drop.email", addr);
+    try {
+      const res = await fetch(DROP_NOTIFY_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: addr,
+          newsId: drop.newsId,
+          at: drop.at,
+          off: !!off,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: data.error || "fail" };
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "net" };
+    }
   }
   function openDropMail(id) {
     const drop = dropById(id);
@@ -1152,22 +1172,23 @@
           <label class="drop-mail-lab">${t("email")}</label>
           <input name="email" type="email" required value="${esc(accountEmail())}" placeholder="${esc(t("emailHint"))}" autocomplete="email">
           <button class="drop-mail-go" type="submit">${t("dropMailGo")}</button>
-          <button class="drop-mail-app" type="button" data-drop-mail-app="${esc(drop.newsId)}">${t("dropMailApp")}</button>
         </form>
       </div>
     `);
     const input = document.querySelector("[data-drop-mail-form] input[name=email]");
     if (input && !input.value) setTimeout(() => input.focus(), 40);
   }
-  function sendDropMail(id, email, kind) {
+  async function sendDropMail(id, email) {
     const drop = dropById(id);
     const addr = String(email || "").trim();
     if (!drop || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) { snack(t("dropMailNeed")); return; }
     dropLs("tw.drop.email", addr);
-    if (kind === "app") openOut(dropMailHref(drop, addr), false);
-    else openOut(dropGmailHref(drop, addr), true);
+    writeDropPref(drop, "notify", true);
+    const armed = await armDropMail(drop, addr, false);
     hideSheet();
-    snack(t("dropMailOk"));
+    syncDropChrome();
+    armDropWatch();
+    snack(armed.ok ? t("dropMailOk") : t("dropMailFail"));
   }
   function dropGcalHref(drop) {
     const start = icsStamp(new Date(drop.at));
@@ -1228,8 +1249,10 @@
       return;
     }
     dropPingQueued = false;
+    const email = accountEmail();
     drops.forEach((drop) => {
       writeDropPref(drop, "notify", true);
+      if (email) armDropMail(drop, email, false);
       if (dropRemain(drop.at) <= 0) fireDrop(drop, { toast: true, noRedirect: true, force: !dropWasFired(drop) });
     });
     armDropWatch();
@@ -4003,14 +4026,6 @@
       openDropMail(dropMail.closest("[data-drop]")?.dataset.drop);
       return;
     }
-    const dropMailApp = e.target.closest("[data-drop-mail-app]");
-    if (dropMailApp) {
-      e.preventDefault();
-      const form = dropMailApp.closest("form");
-      const email = form?.querySelector("input[name=email]")?.value || accountEmail();
-      sendDropMail(dropMailApp.dataset.dropMailApp, email, "app");
-      return;
-    }
     const dropIcs = e.target.closest("[data-drop-ics]");
     if (dropIcs) {
       downloadDropIcs(dropIcs.closest("[data-drop]")?.dataset.drop);
@@ -4167,7 +4182,7 @@
     const mailForm = e.target.closest("[data-drop-mail-form]");
     if (mailForm) {
       e.preventDefault();
-      sendDropMail(mailForm.dataset.dropMailForm, mailForm.querySelector("input[name=email]")?.value, "gmail");
+      sendDropMail(mailForm.dataset.dropMailForm, mailForm.querySelector("input[name=email]")?.value);
       return;
     }
     const form = e.target.closest("[data-comment-form]");
