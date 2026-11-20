@@ -200,7 +200,7 @@ async function upsertEmail(env, email, off, newsId) {
   return { ok: true, status: 200, data: { n: cur.size } };
 }
 
-async function smtpSend(env, { recipients, subject, text, html, selfOnly }) {
+async function smtpSend(env, { recipients, subject, text, html, selfOnly, toEmail }) {
   const user = String(env.GMAIL_USER || "thewears.on@gmail.com").trim();
   const pass = (await readSecret(env.GMAIL_APP_PASSWORD)).replace(/\s+/g, "");
   if (!pass) throw new Error("GMAIL_APP_PASSWORD missing");
@@ -253,7 +253,7 @@ async function smtpSend(env, { recipients, subject, text, html, selfOnly }) {
     if (r.code !== 354) throw new Error(r.line);
     const payload = [
       `From: THE WEARS ON <${user}>`,
-      `To: THE WEARS ON <${user}>`,
+      `To: ${toEmail || `THE WEARS ON <${user}>`}`,
       `Subject: =?UTF-8?B?${b64utf8(subject)}?=`,
       "MIME-Version: 1.0",
       "Content-Type: text/html; charset=UTF-8",
@@ -810,4 +810,176 @@ export async function dropStudioResponse(request, env) {
   } catch (err) {
     return corsJson(request, 500, { error: String(err && err.message || err) });
   }
+}
+
+function hookSecretBytes(raw) {
+  let s = String(raw || "").trim();
+  if (s.includes(",")) s = s.slice(s.indexOf(",") + 1);
+  s = s.replace(/^whsec_/i, "");
+  try {
+    return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  } catch {
+    return new TextEncoder().encode(s);
+  }
+}
+
+function b64Bytes(s) {
+  try {
+    return Uint8Array.from(atob(String(s || "").trim()), (c) => c.charCodeAt(0));
+  } catch {
+    return new Uint8Array();
+  }
+}
+
+function sameBytes(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  let out = 0;
+  for (let i = 0; i < a.length; i++) out |= a[i] ^ b[i];
+  return out === 0;
+}
+
+async function verifySendEmailHook(raw, request, env) {
+  const secret = (await readSecret(env.SEND_EMAIL_HOOK_SECRET)) || (await readSecret(env.AUTH_HOOK_SECRET));
+  if (!secret) return { ok: false, status: 503, error: "SEND_EMAIL_HOOK_SECRET missing." };
+  const id = request.headers.get("webhook-id") || "";
+  const ts = request.headers.get("webhook-timestamp") || "";
+  const sigHeader = request.headers.get("webhook-signature") || "";
+  if (!id || !ts || !sigHeader) return { ok: false, status: 401, error: "Missing webhook signature." };
+  const age = Math.abs(Date.now() / 1000 - Number(ts));
+  if (!Number.isFinite(Number(ts)) || age > 300) return { ok: false, status: 401, error: "Stale webhook." };
+  const key = await crypto.subtle.importKey(
+    "raw",
+    hookSecretBytes(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const mac = new Uint8Array(await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(`${id}.${ts}.${raw}`)
+  ));
+  const sigs = String(sigHeader).split(/\s+/).map((part) => {
+    const bit = part.trim();
+    const i = bit.indexOf(",");
+    return i >= 0 ? bit.slice(i + 1) : bit;
+  }).filter(Boolean);
+  if (!sigs.some((s) => sameBytes(b64Bytes(s), mac))) return { ok: false, status: 401, error: "Bad webhook signature." };
+  return { ok: true };
+}
+
+function authMailCopy(type) {
+  const t = String(type || "signup").toLowerCase();
+  if (t === "recovery") return { kicker: "RESET", title: "PASSWORD<br>CODE", subject: "RESET CODE — THE WEARS ON" };
+  if (t.includes("email_change")) return { kicker: "EMAIL", title: "CONFIRM<br>EMAIL", subject: "CONFIRM EMAIL — THE WEARS ON" };
+  if (t === "magiclink") return { kicker: "SIGN IN", title: "SIGN IN<br>CODE", subject: "SIGN IN CODE — THE WEARS ON" };
+  return { kicker: "MEMBER", title: "VERIFY<br>CODE", subject: "VERIFY CODE — THE WEARS ON" };
+}
+
+function authMailHtml({ code, extra, type, email }) {
+  const copy = authMailCopy(type);
+  const face = "'Inter Tight', Inter, Helvetica, Arial, sans-serif";
+  const digits = String(code || "").replace(/\s+/g, "");
+  const second = String(extra || "").replace(/\s+/g, "");
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${copy.subject}</title>
+</head>
+<body style="margin:0;padding:0;background:#e8e8e8">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e8e8e8">
+    <tr>
+      <td align="center" style="padding:28px 12px">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:100%;background:#f5f5f5;border:1.5px solid #000000">
+          <tr>
+            <td style="padding:10px 14px;border-bottom:1.5px solid #000000">
+              <p style="margin:0;font-family:${face};font-size:11px;font-weight:900;letter-spacing:2.4px;color:#000000">THE VERIFY CARD</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:36px 22px 28px">
+              <span style="display:inline-block;padding:6px 10px;border:1.5px solid #000000;background:#000000;color:#ffffff;font-family:${face};font-size:8px;font-weight:900;letter-spacing:1.5px;line-height:1">${copy.kicker}</span>
+              <h1 style="margin:18px 0 0;font-family:${face};font-size:48px;line-height:0.92;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;color:#000000">${copy.title}</h1>
+              <p style="margin:14px 0 0;font-family:${face};font-size:10px;font-weight:900;letter-spacing:1.8px;line-height:1.4;text-transform:uppercase;color:#000000">${escHtml(email)}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="border-top:1.5px solid #000000;padding:28px 18px;text-align:center">
+              <p style="margin:0;font-family:${face};font-size:9px;font-weight:900;letter-spacing:2.2px;color:#000000">YOUR CODE</p>
+              <p style="margin:14px 0 0;font-family:${face};font-size:52px;line-height:1;font-weight:900;letter-spacing:8px;color:#000000">${escHtml(digits)}</p>
+              ${second ? `<p style="margin:18px 0 0;font-family:${face};font-size:9px;font-weight:900;letter-spacing:2.2px;color:#000000">NEW EMAIL CODE</p><p style="margin:12px 0 0;font-family:${face};font-size:36px;line-height:1;font-weight:900;letter-spacing:8px;color:#000000">${escHtml(second)}</p>` : ""}
+            </td>
+          </tr>
+          <tr>
+            <td style="border-top:1.5px solid #000000;padding:16px 18px 18px">
+              <p style="margin:0;font-family:Inter, ${face};font-size:10px;font-weight:900;letter-spacing:0.6px;line-height:1.55;text-transform:uppercase;color:#000000">Enter this code in THE WEARS ON. It expires. If you did not ask for it, ignore this mail.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="border-top:1.5px solid #000000;padding:12px 18px">
+              <p style="margin:0;font-family:${face};font-size:9px;font-weight:900;letter-spacing:2px;color:#000000">THE WEARS ON</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export async function authMailResponse(request, env) {
+  if (request.method === "OPTIONS") return preflight(request);
+  if (request.method === "GET") return corsJson(request, 200, { ok: true, hook: "send-email" });
+  if (request.method !== "POST") return corsJson(request, 405, { error: "POST." });
+  const raw = await request.text();
+  const verified = await verifySendEmailHook(raw, request, env);
+  if (!verified.ok) {
+    return new Response(JSON.stringify({ error: { message: verified.error } }), {
+      status: verified.status,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  let body = {};
+  try { body = JSON.parse(raw || "{}"); } catch {
+    return new Response(JSON.stringify({ error: { message: "Bad JSON." } }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const email = String(body.user && body.user.email || "").trim().toLowerCase();
+  const data = body.email_data || {};
+  const type = String(data.email_action_type || "signup");
+  const token = String(data.token || "").trim();
+  const tokenNew = String(data.token_new || "").trim();
+  if (!email.includes("@") || !token) {
+    return new Response(JSON.stringify({ error: { message: "Missing email or token." } }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const copy = authMailCopy(type);
+  const text = tokenNew
+    ? `${copy.subject}\n\n${token}\n\nNEW EMAIL CODE\n${tokenNew}\n`
+    : `${copy.subject}\n\n${token}\n`;
+  try {
+    await smtpSend(env, {
+      recipients: [email],
+      toEmail: email,
+      subject: copy.subject,
+      text,
+      html: authMailHtml({ code: token, extra: tokenNew, type, email }),
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: { http_code: 500, message: String(err && err.message || err) } }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  return new Response(JSON.stringify({}), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 }
