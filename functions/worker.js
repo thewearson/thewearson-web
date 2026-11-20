@@ -1,4 +1,4 @@
-import { dropNotifyResponse, inboxSignup, dropTickResponse } from "./_lib.js";
+import { dropNotifyResponse, inboxSignup, dropTickResponse, dropStudioResponse } from "./_lib.js";
 
 export default {
   async fetch(request, env, ctx) {
@@ -17,6 +17,9 @@ export default {
     }
     if (path === "/api/drop-tick") {
       return dropTickResponse(request, env);
+    }
+    if (path === "/api/drop-studio") {
+      return dropStudioResponse(request, env);
     }
     if (env.ASSETS) return env.ASSETS.fetch(request);
     return new Response("Not found", { status: 404 });

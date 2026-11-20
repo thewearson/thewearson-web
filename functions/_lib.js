@@ -1,8 +1,8 @@
 const VICE_STORES = [
-  { label: "NBA Store", url: "https://store.nba.com" },
-  { label: "Fanatics", url: "https://www.fanatics.com/nba/o-1370+z-938737729-293541727" },
-  { label: "Nike SNKRS", url: "https://www.nike.com/launch" },
-  { label: "Cactus Jack", url: "https://shop.travisscott.com" },
+  { id: "nba", label: "NBA Store", url: "https://store.nba.com" },
+  { id: "fanatics", label: "Fanatics", url: "https://www.fanatics.com/nba/o-1370+z-938737729-293541727" },
+  { id: "nike", label: "Nike SNKRS", url: "https://www.nike.com/launch" },
+  { id: "cactus", label: "Cactus Jack", url: "https://shop.travisscott.com" },
 ];
 
 const CACHE_REQ = new Request("https://thewearson.com/__drop-notify-inbox");
@@ -65,15 +65,21 @@ function dropStub(env) {
   return env.DROP_NOTIFY.get(env.DROP_NOTIFY.idFromName("inbox"));
 }
 
+function emptyPack() {
+  return { emails: [], sent: false, lockDone: false, cursor: 0, sentStoreIds: [], wave: null };
+}
+
 async function loadPack(env) {
   const stub = dropStub(env);
   if (stub) {
     const listed = await stub.fetch("https://drop.notify/list");
-    return listed.json().catch(() => ({ emails: [], sent: false }));
+    const raw = await listed.json().catch(() => ({}));
+    return { ...emptyPack(), ...raw };
   }
   const hit = await caches.default.match(CACHE_REQ);
-  if (!hit) return { emails: [], sent: false };
-  return hit.json().catch(() => ({ emails: [], sent: false }));
+  if (!hit) return emptyPack();
+  const raw = await hit.json().catch(() => ({}));
+  return { ...emptyPack(), ...raw };
 }
 
 async function savePack(env, pack) {
@@ -108,7 +114,7 @@ async function upsertEmail(env, email, off) {
     if (cur.size >= 10000) return { ok: false, status: 429, data: { error: "List full." } };
     cur.add(email);
   }
-  await savePack(env, { emails: [...cur], sent: !!pack.sent, cursor: pack.cursor || 0 });
+  await savePack(env, { ...pack, emails: [...cur] });
   return { ok: true, status: 200, data: { n: cur.size } };
 }
 
@@ -186,25 +192,145 @@ async function smtpSend(env, { recipients, subject, text, html, selfOnly }) {
   }
 }
 
-function dropStores(env) {
-  const extra = Array.isArray(env && env.STORES) ? env.STORES : null;
-  return extra && extra.length ? extra : VICE_STORES;
+const SB_URL = "https://ctldtidtnvctxoquextm.supabase.co";
+const SB_KEY = "sb_publishable_t3zzhT3K_iR0FWuFCA4-Ow_Rdn8zsQk";
+
+function escHtml(s) {
+  return String(s || "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
 }
 
-function dropMailSubject() {
-  return "DROP LOCK OPENED — THE WEARS ON";
+function hrefAbs(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  const url = /^https?:\/\//i.test(s) ? s : `https://${s.replace(/^\/+/, "")}`;
+  if (!/^https?:\/\//i.test(url)) return "";
+  return url.replace(/"/g, "%22");
 }
 
-function dropMailText(env) {
+function storeId(label, url, fallback) {
+  const s = `${label} ${url}`.toLowerCase();
+  if (/nike|snkrs/.test(s)) return "nike";
+  if (/fanatics/.test(s)) return "fanatics";
+  if (/nba/.test(s)) return "nba";
+  if (/cactus|travis/.test(s)) return "cactus";
+  return fallback || String(label || "store").toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 18) || "store";
+}
+
+function parseDropJson(raw) {
+  if (!raw) return null;
+  if (typeof raw === "object" && !Array.isArray(raw)) return raw;
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+  return null;
+}
+
+function parseDropNote(note) {
+  const lines = String(note || "").split(/\r?\n/);
+  const stores = [];
+  let at = "";
+  let off = false;
+  for (const line of lines) {
+    const t0 = line.trim();
+    if (!t0) continue;
+    if (/^AT\s+OFF$/i.test(t0) || /^DROP_OFF$/i.test(t0)) { off = true; continue; }
+    const atM = t0.match(/^AT\s+(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\s*$/i);
+    if (atM) { at = atM[1].endsWith("Z") ? atM[1] : `${atM[1]}Z`; continue; }
+    const sm = t0.match(/^(.+?)\s+(https?:\/\/\S+)\s*$/i);
+    if (sm) stores.push({ label: sm[1].trim(), url: sm[2].trim() });
+  }
+  return { at, stores, off };
+}
+
+function normalizeStores(list) {
+  const out = [];
+  const seen = new Set();
+  for (const s of (Array.isArray(list) ? list : []).slice(0, 6)) {
+    const url = hrefAbs(s?.url || s?.href || "");
+    const label = String(s?.label || s?.name || s?.store || "").trim();
+    if (!url || !label) continue;
+    const id = String(s?.id || storeId(label, url, `s${out.length + 1}`));
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, label, url });
+  }
+  return out;
+}
+
+function formatWhen(iso) {
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return "20 NOV 2026 · 10:00 AM ET";
+  try {
+    const d = new Date(ms).toLocaleString("en-US", {
+      timeZone: "America/New_York",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).toUpperCase();
+    return `${d} ET`;
+  } catch {
+    return "20 NOV 2026 · 10:00 AM ET";
+  }
+}
+
+async function loadLiveDrop(env) {
   const newsId = env.VICE_NEWS_ID || "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
-  const stores = dropStores(env);
+  const fallback = {
+    newsId,
+    at: env.VICE_AT || "2026-11-20T15:00:00Z",
+    title: "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI",
+    when: "20 NOV 2026 · 10:00 AM ET",
+    stores: normalizeStores(VICE_STORES),
+    on: true,
+  };
+  const sb = String(env.SUPABASE_URL || env.WEARS_SUPABASE_URL || SB_URL).replace(/\/$/, "");
+  const key = env.SUPABASE_ANON_KEY || env.WEARS_SUPABASE_ANON_KEY || SB_KEY;
+  let row = null;
+  try {
+    const res = await fetch(`${sb}/rest/v1/drip_news?id=eq.${encodeURIComponent(newsId)}&select=id,title,product_name,drop_json,buy_note,buy_url`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    const rows = await res.json().catch(() => []);
+    row = Array.isArray(rows) ? rows[0] : null;
+  } catch {
+    row = null;
+  }
+  if (!row) return fallback;
+  const json = parseDropJson(row.drop_json);
+  const packed = parseDropNote(row.buy_note);
+  const stores = normalizeStores(json?.stores?.length ? json.stores : packed.stores.length ? packed.stores : VICE_STORES);
+  const at = String(json?.at || packed.at || fallback.at);
+  const title = String(json?.title || row.product_name || row.title || fallback.title);
+  return {
+    newsId,
+    at,
+    title,
+    when: formatWhen(at),
+    stores,
+    on: json?.on !== false && !packed.off,
+  };
+}
+
+function dropMailSubject(stores) {
+  const one = Array.isArray(stores) && stores.length === 1 ? stores[0].label : "";
+  return one ? `DROP LOCK OPENED — ${String(one).toUpperCase()}` : "DROP LOCK OPENED — THE WEARS ON";
+}
+
+function dropMailText(wave) {
+  const newsId = wave.newsId || "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
+  const stores = Array.isArray(wave.stores) ? wave.stores : [];
   return [
     "THE WEARS ON",
     "",
     "DROP LOCK OPENED",
     "MEMBER",
-    "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI",
-    "20 NOV 2026 · 10:00 AM ET",
+    String(wave.title || "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI").toUpperCase(),
+    wave.when || "20 NOV 2026 · 10:00 AM ET",
     "",
     ...stores.map((s) => `${s.label}: ${s.url}`),
     "",
@@ -212,10 +338,12 @@ function dropMailText(env) {
   ].join("\n");
 }
 
-function dropMailHtml(env) {
-  const newsId = env.VICE_NEWS_ID || "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
+function dropMailHtml(wave) {
+  const newsId = wave.newsId || "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
   const page = "https://thewearson.com/#/n/" + newsId;
-  const stores = dropStores(env);
+  const stores = Array.isArray(wave.stores) ? wave.stores : [];
+  const title = escHtml(String(wave.title || "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI").toUpperCase());
+  const when = escHtml(wave.when || "20 NOV 2026 · 10:00 AM ET");
   const face = "'Inter Tight', Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif";
   const storeRows = stores.map((s, i) => {
     const on = i === 0;
@@ -224,7 +352,7 @@ function dropMailHtml(env) {
     const fg = on ? "#ffffff" : "#000000";
     return `<tr>
       <td style="border-bottom:${border};padding:0;background:${bg}">
-        <a href="${s.url}" style="display:block;padding:20px 16px;font-family:${face};font-size:12px;font-weight:900;letter-spacing:2.4px;line-height:1;text-transform:uppercase;color:${fg};text-decoration:none;text-align:center">${s.label}</a>
+        <a href="${hrefAbs(s.url)}" style="display:block;padding:20px 16px;font-family:${face};font-size:12px;font-weight:900;letter-spacing:2.4px;line-height:1;text-transform:uppercase;color:${fg};text-decoration:none;text-align:center">${escHtml(s.label)}</a>
       </td>
     </tr>`;
   }).join("");
@@ -275,8 +403,8 @@ function dropMailHtml(env) {
                     </table>
                     <h1 style="margin:20px 0 0;font-family:${face};font-size:48px;line-height:0.92;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;color:#000000">DROP LOCK<br>OPENED</h1>
                     <span style="display:inline-block;margin-top:16px;padding:6px 10px;border:1.5px solid #000000;background:#000000;color:#ffffff;font-family:${face};font-size:8px;font-weight:900;letter-spacing:1.5px;line-height:1">MEMBER</span>
-                    <p style="margin:18px 0 0;font-family:${face};font-size:11px;font-weight:900;letter-spacing:1.2px;line-height:1.25;text-transform:uppercase;color:#000000">MIAMI HEAT × CACTUS JACK × NIKE × GTA VI</p>
-                    <p style="margin:10px 0 0;font-family:Inter, ${face};font-size:10px;font-weight:900;letter-spacing:1.8px;line-height:1.4;color:#000000">20 NOV 2026 · 10:00 AM ET</p>
+                    <p style="margin:18px 0 0;font-family:${face};font-size:11px;font-weight:900;letter-spacing:1.2px;line-height:1.25;text-transform:uppercase;color:#000000">${title}</p>
+                    <p style="margin:10px 0 0;font-family:Inter, ${face};font-size:10px;font-weight:900;letter-spacing:1.8px;line-height:1.4;color:#000000">${when}</p>
                   </td>
                 </tr>
                 <tr>
@@ -326,29 +454,58 @@ export async function dropNotifyResponse(request, env) {
   return corsJson(request, 200, { ok: true, on: body.off !== true });
 }
 
-export async function sendDueDropMail(env, opt = {}) {
-  const at = Date.parse(env.VICE_AT || "2026-11-20T15:00:00Z");
-  if (!Number.isFinite(at) || (Date.now() < at && !opt.force)) return { skipped: true };
-  const pack = await loadPack(env);
-  const emails = Array.isArray(pack.emails) ? pack.emails : [];
-  if (!emails.length) return { sent: 0 };
-  const cursor = Math.max(0, Number(pack.cursor || 0) || 0);
-  if (pack.sent && cursor >= emails.length && !opt.force) return { already: true };
-  const start = opt.force ? 0 : cursor;
+function sameSecret(a, b) {
+  const x = String(a || "");
+  const y = String(b || "");
+  if (!x || !y || x.length !== y.length) return false;
+  let out = 0;
+  for (let i = 0; i < x.length; i += 1) out |= x.charCodeAt(i) ^ y.charCodeAt(i);
+  return out === 0;
+}
+
+async function studioAuthorized(request, env) {
+  const got = String(request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  if (!got) return false;
+  const keys = [
+    await readSecret(env.DROP_STUDIO_KEY),
+    await readSecret(env.GMAIL_APP_PASSWORD),
+  ].filter(Boolean);
+  return keys.some((k) => sameSecret(got, k));
+}
+
+function waveKey(storeIds, early) {
+  const ids = [...new Set((storeIds || []).map(String))].sort();
+  return `${early ? "early" : "lock"}:${ids.join("+") || "none"}`;
+}
+
+async function sendWave(env, pack, emails, wave, sentStoreIds) {
+  const stores = Array.isArray(wave.stores) ? wave.stores : [];
+  if (!stores.length) return { error: "No stores on card." };
+  if (!emails.length) {
+    return { sent: 0, done: true, empty: true, storeIds: wave.storeIds || [], sentStoreIds };
+  }
+  const start = Math.max(0, Number(wave.cursor || 0) || 0);
   const batch = emails.slice(start, start + 40);
   if (!batch.length) {
-    await savePack(env, { emails, sent: true, cursor: emails.length });
-    return { sent: 0, done: true };
+    const nextSent = [...new Set([...sentStoreIds, ...(wave.storeIds || [])])];
+    await savePack(env, {
+      ...pack,
+      emails,
+      sentStoreIds: nextSent,
+      lockDone: !!(pack.lockDone || !wave.early),
+      wave: { ...wave, cursor: emails.length, done: true },
+    });
+    return { sent: 0, done: true, storeIds: wave.storeIds || [], sentStoreIds: nextSent, total: emails.length };
   }
-  const subject = dropMailSubject();
-  const text = dropMailText(env);
-  const html = dropMailHtml(env);
+  const subject = dropMailSubject(stores);
+  const text = dropMailText(wave);
+  const html = dropMailHtml(wave);
   const hook = await readSecret(env.DROP_MAIL_HOOK);
   if (hook) {
     const res = await fetch(hook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fire: true, emails: batch, html, text, subject }),
+      body: JSON.stringify({ fire: true, emails: batch, html, text, subject, storeIds: wave.storeIds || [] }),
     });
     if (!res.ok) throw new Error(`mail hook ${res.status}`);
   } else {
@@ -356,8 +513,82 @@ export async function sendDueDropMail(env, opt = {}) {
   }
   const next = start + batch.length;
   const done = next >= emails.length;
-  await savePack(env, { emails, sent: done, cursor: next });
-  return { sent: batch.length, cursor: next, done, total: emails.length };
+  const nextSent = done ? [...new Set([...sentStoreIds, ...(wave.storeIds || [])])] : sentStoreIds;
+  await savePack(env, {
+    ...pack,
+    emails,
+    sentStoreIds: nextSent,
+    lockDone: !!(pack.lockDone || (done && !wave.early)),
+    wave: { ...wave, cursor: next, done },
+  });
+  return {
+    sent: batch.length,
+    cursor: next,
+    done,
+    total: emails.length,
+    storeIds: wave.storeIds || [],
+    sentStoreIds: nextSent,
+    early: !!wave.early,
+  };
+}
+
+export async function sendDueDropMail(env, opt = {}) {
+  const pack = await loadPack(env);
+  const emails = Array.isArray(pack.emails) ? pack.emails : [];
+  const sentStoreIds = [...new Set((pack.sentStoreIds || []).map(String))];
+  let wave = pack.wave && typeof pack.wave === "object" ? pack.wave : null;
+  const studioIds = (opt.studio && Array.isArray(opt.storeIds) ? opt.storeIds : [])
+    .map((s) => String(s || "").trim())
+    .filter(Boolean);
+
+  if (wave && !wave.done && Array.isArray(wave.stores) && wave.stores.length) {
+    if (studioIds.length && waveKey(studioIds, true) !== wave.key) {
+      return { busy: true, wave: { key: wave.key, storeIds: wave.storeIds, cursor: wave.cursor, done: false } };
+    }
+    return sendWave(env, pack, emails, wave, sentStoreIds);
+  }
+
+  const live = await loadLiveDrop(env);
+
+  if (studioIds.length) {
+    const want = new Set(studioIds);
+    const stores = (live.stores || []).filter((s) => want.has(s.id) && s.url);
+    if (!stores.length) return { error: "No matching live store URLs. Save the dispatch first." };
+    const ids = stores.map((s) => s.id);
+    if (!opt.again && ids.every((id) => sentStoreIds.includes(id))) {
+      return { already: true, sentStoreIds, storeIds: ids };
+    }
+    wave = {
+      key: waveKey(ids, true),
+      stores,
+      storeIds: ids,
+      title: live.title,
+      when: live.when,
+      newsId: live.newsId,
+      cursor: 0,
+      done: false,
+      early: true,
+    };
+    return sendWave(env, pack, emails, wave, sentStoreIds);
+  }
+
+  const at = Date.parse(live.at || env.VICE_AT || "2026-11-20T15:00:00Z");
+  if (!Number.isFinite(at) || (Date.now() < at && !opt.force)) return { skipped: true };
+  if (!live.on) return { skipped: true, off: true };
+  const stores = (live.stores || []).filter((s) => s.url && !sentStoreIds.includes(s.id));
+  if (!stores.length) return { already: true, done: true, sentStoreIds };
+  wave = {
+    key: waveKey(stores.map((s) => s.id), false),
+    stores,
+    storeIds: stores.map((s) => s.id),
+    title: live.title,
+    when: live.when,
+    newsId: live.newsId,
+    cursor: 0,
+    done: false,
+    early: false,
+  };
+  return sendWave(env, pack, emails, wave, sentStoreIds);
 }
 
 export async function dropTickResponse(request, env) {
@@ -368,6 +599,43 @@ export async function dropTickResponse(request, env) {
   try {
     const out = await sendDueDropMail(env, { live: body.live === true });
     return corsJson(request, 200, { ok: true, ...out });
+  } catch (err) {
+    return corsJson(request, 500, { error: String(err && err.message || err) });
+  }
+}
+
+export async function dropStudioResponse(request, env) {
+  if (request.method === "OPTIONS") return preflight(request);
+  if (!(await studioAuthorized(request, env))) {
+    return corsJson(request, 401, { error: "Studio auth failed." });
+  }
+  if (request.method === "GET") {
+    const pack = await loadPack(env);
+    return corsJson(request, 200, {
+      ok: true,
+      n: (pack.emails || []).length,
+      sentStoreIds: pack.sentStoreIds || [],
+      lockDone: !!pack.lockDone,
+      wave: pack.wave ? {
+        key: pack.wave.key,
+        done: !!pack.wave.done,
+        cursor: pack.wave.cursor || 0,
+        storeIds: pack.wave.storeIds || [],
+        early: !!pack.wave.early,
+      } : null,
+    });
+  }
+  if (request.method !== "POST") return corsJson(request, 405, { error: "POST or GET." });
+  let body = {};
+  try { body = await request.json(); } catch { body = {}; }
+  const storeIds = Array.isArray(body.storeIds)
+    ? body.storeIds.map((s) => String(s || "").trim()).filter(Boolean).slice(0, 6)
+    : [];
+  if (!storeIds.length) return corsJson(request, 400, { error: "storeIds required." });
+  try {
+    const out = await sendDueDropMail(env, { studio: true, storeIds, again: body.again === true });
+    const status = out.error ? 400 : 200;
+    return corsJson(request, status, { ok: !out.error, ...out });
   } catch (err) {
     return corsJson(request, 500, { error: String(err && err.message || err) });
   }
