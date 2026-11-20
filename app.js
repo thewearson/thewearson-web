@@ -104,8 +104,12 @@
       authTitle: "LOGIN REQUIRED",
       authLike: "LIKE THIS FIT YOU NEED TO BE LOGGED IN.\n\nJOIN THE WEARS ON COMMUNITY, REFLECT YOUR STYLE AND BUILD YOUR ARCHIVE.",
       authSave: "SAVE THIS FIT YOU NEED TO BE LOGGED IN.\n\nJOIN THE WEARS ON COMMUNITY, REFLECT YOUR STYLE AND BUILD YOUR ARCHIVE.",
+      authSavePiece: "SAVE THIS PIECE YOU NEED TO BE LOGGED IN.\n\nJOIN THE WEARS ON COMMUNITY, REFLECT YOUR STYLE AND BUILD YOUR ARCHIVE.",
       savedMsg: "FIT SAVED.", removedMsg: "FIT REMOVED.", savedEmpty: "NO SAVED FITS.",
+      pdSave: "SAVE", pieceSaved: "PIECE SAVED.", pieceRemoved: "PIECE REMOVED.",
+      savedFits: "SAVED FITS", savedPieces: "SAVED PIECES", savedEmptyPieces: "NO SAVED PIECES.",
       savedHint: "PRIVATE TO THIS ACCOUNT.",
+      savedNet: "PRIVATE TO THIS ACCOUNT. YOUR LIBRARY.",
       setPref: "PREFERENCES", setPrivacy: "PRIVACY", setHelp: "HELP", setAccount: "ACCOUNT SETTINGS",
       setRegion: "CONTENT REGION", setPublic: "PUBLIC PROFILE",
       setPr: "PR / PARTNERSHIPS", setHc: "HELP CENTER",
@@ -130,6 +134,26 @@
       forgotSent: "CHECK YOUR EMAIL TO RESET THE PASSWORD.",
       sendReset: "SEND RESET LINK",
       commentsEmpty: "NO COMMENTS YET.",
+      memBasic: "BASIC", memPrem: "PREMIUM",
+      memPrivate: "PRIVATE ACCOUNT", memPrivateD: "THIS ACCOUNT IS PRIVATE.",
+      memNone: "NO MEMBER FOUND.",
+      memFollowed: "FOLLOWED ARTISTS",
+      dropKicker: "DROP",
+      dropWhen: "NOV. 20 — 10:00 AM ET",
+      dropTsi: "18:00 TSİ",
+      dropDays: "DAYS", dropHrs: "HRS", dropMin: "MIN", dropSec: "SEC",
+      dropLive: "DROP IS LIVE",
+      dropLiveShop: "🚨 DROP IS LIVE! SHOP NOW",
+      dropAuto: "AUTO-REDIRECT AT DROP",
+      dropAutoD: "AT 10:00 AM ET THE SELECTED STORE OPENS.",
+      dropDefault: "DEFAULT STORE",
+      dropNotify: "NOTIFY ME ON SITE",
+      dropNotifying: "NOTIFYING",
+      dropIcs: "EMAIL / CALENDAR REMINDER",
+      dropIcsOk: "CALENDAR ALARM DOWNLOADED.",
+      dropNotifyOk: "WE’LL PING THIS TAB AT DROP.",
+      dropNotifyDenied: "SITE TOAST STAYS ON. BROWSER ALERTS ARE BLOCKED.",
+      dropShop: "SHOP NOW",
       legalFooter: "© 2027 RACKSGRID",
       country: "COUNTRY", regionOpt: "CONTENT REGION (OPTIONAL)",
       regionDesc: "Controls the fashion culture and artists in your feed.",
@@ -199,8 +223,12 @@
       authTitle: "GİRİŞ GEREKLİ",
       authLike: "BU FIT’İ BEĞENMEK İÇİN GİRİŞ YAPMANIZ GEREKİYOR.\n\nTHE WEARS ON TOPLULUĞUNA KATILIN, TARZINIZI YANSITIN, ARŞİVİNİZİ KURUN.",
       authSave: "BU FIT’İ KAYDETMEK İÇİN GİRİŞ YAPMANIZ GEREKİYOR.\n\nTHE WEARS ON TOPLULUĞUNA KATILIN, TARZINIZI YANSITIN, ARŞİVİNİZİ KURUN.",
+      authSavePiece: "BU PARÇAYI KAYDETMEK İÇİN GİRİŞ YAPMANIZ GEREKİYOR.\n\nTHE WEARS ON TOPLULUĞUNA KATILIN, TARZINIZI YANSITIN, ARŞİVİNİZİ KURUN.",
       savedMsg: "FIT KAYDEDİLDİ.", removedMsg: "FIT KALDIRILDI.", savedEmpty: "KAYITLI FIT YOK.",
+      pdSave: "KAYDET", pieceSaved: "PARÇA KAYDEDİLDİ.", pieceRemoved: "PARÇA KALDIRILDI.",
+      savedFits: "KAYITLI FIT", savedPieces: "KAYITLI PARÇA", savedEmptyPieces: "KAYITLI PARÇA YOK.",
       savedHint: "BU HESABA ÖZEL.",
+      savedNet: "BU HESABA ÖZEL. KÜTÜPHANEN.",
       setPref: "TERCİHLER", setPrivacy: "GİZLİLİK", setHelp: "YARDIM", setAccount: "HESAP AYARLARI",
       setRegion: "İÇERİK BÖLGESİ", setPublic: "HERKESE AÇIK PROFİL",
       setPr: "PR / İŞ BİRLİĞİ", setHc: "DESTEK",
@@ -225,6 +253,26 @@
       forgotSent: "ŞİFRE SIFIRLAMAK İÇİN E-POSTANI KONTROL ET.",
       sendReset: "SIFIRLAMA LİNKİ GÖNDER",
       commentsEmpty: "HENÜZ YORUM YOK.",
+      memBasic: "BASIC", memPrem: "PREMIUM",
+      memPrivate: "GİZLİ HESAP", memPrivateD: "BU HESAP GİZLİ.",
+      memNone: "ÜYE BULUNAMADI.",
+      memFollowed: "TAKİP EDİLEN SANATÇILAR",
+      dropKicker: "DROP",
+      dropWhen: "20 KAS — 10:00 AM ET",
+      dropTsi: "18:00 TSİ",
+      dropDays: "GÜN", dropHrs: "SAAT", dropMin: "DK", dropSec: "SN",
+      dropLive: "DROP YAYINDA",
+      dropLiveShop: "🚨 DROP YAYINDA! ŞİMDİ AL",
+      dropAuto: "DROP ANINDA OTOMATİK YÖNLENDİR",
+      dropAutoD: "10:00 AM ET’DE SEÇİLİ MAĞAZA AÇILIR.",
+      dropDefault: "VARSAYILAN MAĞAZA",
+      dropNotify: "SİTEDE HABER VER",
+      dropNotifying: "HABER AÇIK",
+      dropIcs: "E-POSTA / TAKVİM HATIRLATICI",
+      dropIcsOk: "TAKVİM ALARMI İNDİRİLDİ.",
+      dropNotifyOk: "DROP ANINDA BU SEKMEDE PİNG.",
+      dropNotifyDenied: "SİTE BİLDİRİMİ AÇIK. TARAYICI İZNİ KAPALI.",
+      dropShop: "ŞİMDİ AL",
       legalFooter: "© 2027 RACKSGRID",
       country: "ÜLKE", regionOpt: "İÇERİK BÖLGESİ (OPSİYONEL)",
       regionDesc: "Akışındaki moda kültürünü ve sanatçıları belirler.",
@@ -341,9 +389,14 @@
     me: null,
     liked: new Set(),
     saved: new Set(),
+    savedPieces: new Set(),
     followed: new Set(),
     likeCounts: {},
+    followCounts: {},
     comments: {},
+    people: {},
+    personHint: null,
+    peopleBusy: "",
     hyped: new Set(),
     hypeCounts: {},
     remember: true,
@@ -502,8 +555,10 @@
     const add = (v) => {
       if (v == null) return;
       if (Array.isArray(v)) { v.forEach(add); return; }
+      if (typeof v === "object") return;
       let s = String(v).trim();
-      if (!s || s === "null") return;
+      if (!s || s === "null" || s === "[object Object]") return;
+      if (s.startsWith("{") && s.includes("drop")) return;
       if (s.startsWith("[") && s.endsWith("]")) { asList(s).forEach(add); return; }
       if (!out.includes(s) && out.length < max) out.push(s);
     };
@@ -616,6 +671,8 @@
   }
   function mapNews(row) {
     const pics = photos(row, 5);
+    const packed = parseDropNote(row.buy_note || row.buyNote);
+    const drop = resolveDrop(row, packed);
     return {
       id: String(row.id || ""),
       category: up(row.category || "CULTURE"),
@@ -629,9 +686,418 @@
       productName: up(row.product_name || row.productName),
       releaseDate: up(row.release_date || row.releaseDate),
       buyUrl: String(row.buy_url || row.buyUrl || "").trim(),
-      buyNote: up(row.buy_note || row.buyNote),
+      buyNote: up(packed.note),
       sku: up(row.sku),
+      drop,
     };
+  }
+
+  const VICE_NEWS_ID = "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
+  const VICE_AT = "2026-11-20T15:00:00Z";
+  const VICE_STORES = [
+    { id: "nike", label: "Nike SNKRS", url: "https://www.nike.com/launch" },
+    { id: "nba", label: "NBA Store", url: "https://store.nba.com" },
+    { id: "cactus", label: "Cactus Jack", url: "https://shop.travisscott.com" },
+  ];
+  let dropTimer = 0;
+  let dropTick = 0;
+  let dropWatchBound = false;
+  let dropPingQueued = false;
+
+  function hrefAbs(raw) {
+    const s = String(raw || "").trim();
+    if (!s) return "";
+    return /^https?:\/\//i.test(s) ? s : `https://${s.replace(/^\/+/, "")}`;
+  }
+  function dropStoreId(label, url) {
+    const s = `${label} ${url}`.toLowerCase();
+    if (/nike|snkrs/.test(s)) return "nike";
+    if (/fanatics/.test(s)) return "fanatics";
+    if (/nba/.test(s)) return "nba";
+    if (/cactus|travis/.test(s)) return "cactus";
+    return String(label || "store").toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 18) || "store";
+  }
+  function looksViceCity(row) {
+    if (String(row?.id || "") === VICE_NEWS_ID) return true;
+    const s = `${row?.title || ""} ${row?.dek || ""} ${row?.body || ""} ${row?.product_name || row?.productName || ""}`.toUpperCase();
+    return s.includes("MIAMI HEAT") && s.includes("CACTUS JACK");
+  }
+  function parseDropJson(raw) {
+    if (!raw) return null;
+    if (typeof raw === "object" && !Array.isArray(raw)) return raw;
+    if (typeof raw === "string") {
+      try { return JSON.parse(raw); } catch { return null; }
+    }
+    return null;
+  }
+  function parseDropNote(note) {
+    const lines = String(note || "").split(/\r?\n/);
+    const stores = [];
+    const human = [];
+    let at = "";
+    let off = false;
+    for (const line of lines) {
+      const t0 = line.trim();
+      if (!t0) continue;
+      if (/^AT\s+OFF$/i.test(t0) || /^DROP_OFF$/i.test(t0)) { off = true; continue; }
+      const atM = t0.match(/^AT\s+(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\s*$/i);
+      if (atM) { at = atM[1].endsWith("Z") ? atM[1] : `${atM[1]}Z`; continue; }
+      const sm = t0.match(/^(.+?)\s+(https?:\/\/\S+)\s*$/i);
+      if (sm) {
+        stores.push({ id: dropStoreId(sm[1], sm[2]), label: sm[1].trim(), url: hrefAbs(sm[2]) });
+        continue;
+      }
+      human.push(t0);
+    }
+    return { at, stores, note: human.join("\n"), off };
+  }
+  function normalizeDropStores(list, fallback) {
+    const src = Array.isArray(list) && list.length ? list : fallback;
+    const out = [];
+    for (const s of src.slice(0, 3)) {
+      const url = hrefAbs(s?.url || s?.href || "");
+      const label = String(s?.label || s?.name || s?.store || "").trim();
+      if (!url || !label) continue;
+      out.push({ id: String(s.id || dropStoreId(label, url)), label, url });
+    }
+    return out.length ? out : fallback.slice();
+  }
+  function resolveDrop(row, packed) {
+    const json = parseDropJson(row.drop_json || row.dropJson);
+    const pack = packed || parseDropNote(row.buy_note || row.buyNote);
+    if (json && json.on === false) return null;
+    if (pack.off) return null;
+    const vice = looksViceCity(row);
+    const on = json?.on === true || pack.stores.length >= 2 || vice;
+    if (!on) return null;
+    const at = String(json?.at || pack.at || (vice ? VICE_AT : "")).trim();
+    if (!at || Number.isNaN(Date.parse(at))) return null;
+    const fallback = vice ? VICE_STORES : [];
+    const stores = normalizeDropStores(json?.stores || pack.stores, fallback);
+    if (!stores.length) return null;
+    const buy = hrefAbs(row.buy_url || row.buyUrl);
+    if (buy) {
+      const id = dropStoreId("", buy);
+      const hit = stores.find((s) => s.id === id) || stores.find((s) => hrefAbs(s.url).replace(/\/+$/, "") === buy.replace(/\/+$/, ""));
+      if (hit) hit.url = buy;
+    }
+    return {
+      newsId: String(row.id || ""),
+      at,
+      title: String(json?.title || row.title || "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI"),
+      stores,
+      defaultId: String(json?.defaultId || stores[0].id),
+      vice,
+    };
+  }
+  function dropLs(key, val) {
+    try {
+      if (val === undefined) return localStorage.getItem(key) || "";
+      if (val === null) localStorage.removeItem(key);
+      else localStorage.setItem(key, String(val));
+    } catch { return ""; }
+    return val === undefined ? "" : String(val);
+  }
+  function dropPrefs(drop) {
+    const id = drop?.newsId || "";
+    const vice = !!(drop && (drop.vice || id === VICE_NEWS_ID));
+    const notify = dropLs(`tw.drop.notify.${id}`) === "true" || (vice && dropLs("vice_city_notify") === "true");
+    const auto = dropLs(`tw.drop.auto.${id}`) === "true";
+    const store = dropLs(`tw.drop.store.${id}`) || drop?.defaultId || "nike";
+    return { notify, auto, store };
+  }
+  function writeDropPref(drop, kind, on) {
+    if (!drop?.newsId) return;
+    const id = drop.newsId;
+    const key = kind === "auto" ? `tw.drop.auto.${id}` : `tw.drop.notify.${id}`;
+    dropLs(key, on ? "true" : "false");
+    if (kind === "notify" && (drop.vice || id === VICE_NEWS_ID)) dropLs("vice_city_notify", on ? "true" : "false");
+  }
+  function setDropStorePref(drop, storeId) {
+    if (!drop?.newsId || !storeId) return;
+    dropLs(`tw.drop.store.${drop.newsId}`, storeId);
+  }
+  function dropRemain(at) {
+    return new Date(at).getTime() - Date.now();
+  }
+  function dropParts(ms) {
+    const live = ms <= 0;
+    const tot = Math.max(0, Math.floor(ms / 1000));
+    const days = Math.floor(tot / 86400);
+    return {
+      live,
+      days,
+      d: days,
+      h: days > 0 ? Math.floor((tot % 86400) / 3600) : Math.floor(tot / 3600),
+      m: Math.floor((tot % 3600) / 60),
+      s: tot % 60,
+    };
+  }
+  function dropPad(n) {
+    return String(Math.max(0, n)).padStart(2, "0");
+  }
+  function activeDrops() {
+    return (state.news || []).map((n) => n.drop).filter(Boolean);
+  }
+  function dropById(id) {
+    return (state.news || []).find((n) => n.id === id)?.drop || null;
+  }
+  function pickDropStore(drop, storeId) {
+    if (!drop) return null;
+    return drop.stores.find((s) => s.id === storeId) || drop.stores[0] || null;
+  }
+  function icsEsc(s) {
+    return String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+  }
+  function icsStamp(d) {
+    return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  }
+  function dropBox(n) {
+    const drop = n?.drop;
+    if (!drop) return "";
+    const prefs = dropPrefs(drop);
+    const parts = dropParts(dropRemain(drop.at));
+    const cells = parts.days > 0
+      ? [["d", parts.d, t("dropDays")], ["h", parts.h, t("dropHrs")], ["m", parts.m, t("dropMin")], ["s", parts.s, t("dropSec")]]
+      : [["h", parts.h, t("dropHrs")], ["m", parts.m, t("dropMin")], ["s", parts.s, t("dropSec")]];
+    return `<section class="drop-box ${parts.live ? "is-live" : ""}" data-drop="${esc(drop.newsId)}" data-drop-at="${esc(drop.at)}">
+      <header class="drop-head">
+        <p class="kicker">${t("dropKicker")}</p>
+        <h2>${esc(drop.title)}</h2>
+        <p class="drop-when">${t("dropWhen")} · ${t("dropTsi")}</p>
+      </header>
+      <p class="drop-live">${esc(t("dropLiveShop"))}</p>
+      <div class="drop-clock ${parts.days > 0 ? "is-days" : ""}" aria-live="polite">
+        ${cells.map(([k, v, lab]) => `<div class="drop-cell"><b data-drop-${k}>${dropPad(v)}</b><em>${esc(lab)}</em></div>`).join("")}
+      </div>
+      <div class="drop-pref">
+        <div>
+          <p>${t("dropAuto")}</p>
+          <span>${t("dropAutoD")}</span>
+        </div>
+        <button class="hype-pill ${prefs.auto ? "is-on" : ""}" type="button" data-drop-auto aria-pressed="${prefs.auto ? "true" : "false"}" aria-label="${t("dropAuto")}"><i></i></button>
+      </div>
+      <div class="drop-picks">
+        <p class="drop-picks-lab">${t("dropDefault")}</p>
+        <div class="drop-chips">${drop.stores.map((s) => `<button class="drop-chip ${prefs.store === s.id ? "is-on" : ""}" type="button" data-drop-pick="${esc(s.id)}">${esc(s.label)}</button>`).join("")}</div>
+      </div>
+      <div class="drop-buys">${drop.stores.map((s) => `<a class="drop-buy ${prefs.store === s.id ? "is-on" : ""}" href="${esc(s.url)}" target="_blank" rel="noopener" data-visit data-drop-pick="${esc(s.id)}">${esc(s.label)}</a>`).join("")}</div>
+      <div class="drop-acts">
+        <button class="drop-act ${prefs.notify ? "is-on" : ""}" type="button" data-drop-notify>${prefs.notify ? t("dropNotifying") : t("dropNotify")}</button>
+        <button class="drop-act" type="button" data-drop-ics>${t("dropIcs")}</button>
+      </div>
+    </section>`;
+  }
+  function paintDropClock() {
+    document.querySelectorAll("[data-drop]").forEach((el) => {
+      const drop = dropById(el.dataset.drop);
+      if (!drop) return;
+      const parts = dropParts(dropRemain(drop.at));
+      el.classList.toggle("is-live", parts.live);
+      const set = (k, v) => {
+        const node = el.querySelector(`[data-drop-${k}]`);
+        if (node) node.textContent = dropPad(v);
+      };
+      set("d", parts.d);
+      set("h", parts.h);
+      set("m", parts.m);
+      set("s", parts.s);
+    });
+  }
+  function dropFiredKey(drop) {
+    return `tw.drop.fired.${drop.newsId}.${drop.at}`;
+  }
+  function dropWasFired(drop) {
+    try { return sessionStorage.getItem(dropFiredKey(drop)) === "1"; } catch { return false; }
+  }
+  function markDropFired(drop) {
+    try { sessionStorage.setItem(dropFiredKey(drop), "1"); } catch { /* private */ }
+  }
+  function dropPush(drop) {
+    if (!drop || typeof Notification === "undefined") return;
+    if (Notification.permission !== "granted") return;
+    try {
+      new Notification("THE WEARS ON", {
+        body: t("dropLiveShop"),
+        tag: `tw-drop-${drop.newsId}`,
+      });
+    } catch { /* blocked */ }
+  }
+  function dropToast(drop) {
+    if (!drop) return;
+    document.querySelector(".drop-toast")?.remove();
+    const prefs = dropPrefs(drop);
+    const el = document.createElement("aside");
+    el.className = "drop-toast";
+    el.setAttribute("role", "status");
+    const primary = pickDropStore(drop, prefs.store);
+    el.innerHTML = `<p class="kicker">${t("dropKicker")}</p>
+      <p class="drop-toast-title">${esc(t("dropLiveShop"))}</p>
+      <div class="drop-toast-acts">
+        ${primary ? `<a class="drop-buy is-on" href="${esc(primary.url)}" target="_blank" rel="noopener">${t("dropShop")}</a>` : ""}
+        <button type="button" data-close-drop-toast>${t("close")}</button>
+      </div>`;
+    document.body.appendChild(el);
+  }
+  function fireDrop(drop, opt = {}) {
+    if (!drop) return;
+    const prefs = dropPrefs(drop);
+    const late = !!opt.late;
+    const redirect = !late && !opt.noRedirect && prefs.auto;
+    if (dropWasFired(drop) && !opt.force) return;
+    markDropFired(drop);
+    dropPush(drop);
+    if (redirect) {
+      const store = pickDropStore(drop, prefs.store);
+      if (store) {
+        location.href = store.url;
+        return;
+      }
+    }
+    if (prefs.notify || opt.toast || late) dropToast(drop);
+    paintDropClock();
+  }
+  function scheduleDrop(drop) {
+    const ms = dropRemain(drop.at);
+    if (ms <= 0) {
+      const prefs = dropPrefs(drop);
+      if (!dropWasFired(drop) && (prefs.notify || prefs.auto || hash().path === "n")) {
+        fireDrop(drop, { late: true, toast: hash().path === "n" });
+      }
+      paintDropClock();
+      return;
+    }
+    const wait = Math.min(ms, 1000 * 60 * 30);
+    dropTimer = window.setTimeout(() => {
+      if (dropRemain(drop.at) <= 0) fireDrop(drop);
+      else scheduleDrop(drop);
+    }, wait);
+  }
+  function armDropWatch() {
+    window.clearTimeout(dropTimer);
+    window.clearInterval(dropTick);
+    const drops = activeDrops();
+    paintDropClock();
+    if (!drops.length) return;
+    dropTick = window.setInterval(paintDropClock, 250);
+    const next = drops.slice().sort((a, b) => dropRemain(a.at) - dropRemain(b.at))[0];
+    scheduleDrop(next);
+    if (!dropWatchBound) {
+      dropWatchBound = true;
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) return;
+        activeDrops().forEach((d) => {
+          if (dropRemain(d.at) <= 0 && !dropWasFired(d)) {
+            const prefs = dropPrefs(d);
+            if (prefs.notify || prefs.auto || hash().path === "n") fireDrop(d, { late: true, toast: hash().path === "n" });
+          }
+        });
+        paintDropClock();
+      });
+    }
+  }
+  function syncDropChrome(root) {
+    const box = (root || document).querySelector("[data-drop]");
+    if (!box) return;
+    const drop = dropById(box.dataset.drop);
+    if (!drop) return;
+    const prefs = dropPrefs(drop);
+    const autoBtn = box.querySelector("[data-drop-auto]");
+    if (autoBtn) {
+      autoBtn.classList.toggle("is-on", prefs.auto);
+      autoBtn.setAttribute("aria-pressed", prefs.auto ? "true" : "false");
+    }
+    box.querySelectorAll("[data-drop-pick]").forEach((el) => {
+      el.classList.toggle("is-on", el.dataset.dropPick === prefs.store);
+    });
+    const notifyBtn = box.querySelector("[data-drop-notify]");
+    if (notifyBtn) {
+      notifyBtn.classList.toggle("is-on", prefs.notify);
+      notifyBtn.textContent = prefs.notify ? t("dropNotifying") : t("dropNotify");
+    }
+  }
+  async function toggleDropNotify(id) {
+    const drop = dropById(id);
+    if (!drop) return;
+    const on = !dropPrefs(drop).notify;
+    writeDropPref(drop, "notify", on);
+    if (on && typeof Notification !== "undefined" && Notification.permission === "default") {
+      try { await Notification.requestPermission(); } catch { /* ignore */ }
+    }
+    if (on && typeof Notification !== "undefined" && Notification.permission === "denied") snack(t("dropNotifyDenied"));
+    else if (on) snack(t("dropNotifyOk"));
+    syncDropChrome();
+    armDropWatch();
+  }
+  function toggleDropAuto(id) {
+    const drop = dropById(id);
+    if (!drop) return;
+    const on = !dropPrefs(drop).auto;
+    writeDropPref(drop, "auto", on);
+    if (on && !dropLs(`tw.drop.store.${drop.newsId}`)) setDropStorePref(drop, drop.defaultId);
+    syncDropChrome();
+    armDropWatch();
+  }
+  function setDropStoreFromEvent(id, storeId) {
+    const drop = dropById(id);
+    if (!drop || !storeId) return;
+    setDropStorePref(drop, storeId);
+    syncDropChrome();
+  }
+  function downloadDropIcs(id) {
+    const drop = dropById(id);
+    if (!drop) return;
+    const start = new Date(drop.at);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const page = `${location.origin}/#/n/${encodeURIComponent(drop.newsId)}`;
+    const stores = drop.stores.map((s) => `${s.label}: ${s.url}`).join("\n");
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//THE WEARS ON//DROP//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      `UID:drop-${drop.newsId}@thewearson.com`,
+      `DTSTAMP:${icsStamp(new Date())}`,
+      `DTSTART:${icsStamp(start)}`,
+      `DTEND:${icsStamp(end)}`,
+      `SUMMARY:${icsEsc(drop.title)}`,
+      `DESCRIPTION:${icsEsc(`10:00 AM ET / 18:00 TSI\n${stores}\n${page}`)}`,
+      `URL:${page}`,
+      "BEGIN:VALARM",
+      "TRIGGER:PT0S",
+      "ACTION:DISPLAY",
+      "DESCRIPTION:DROP IS LIVE",
+      "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = "THE-WEARS-ON-DROP.ics";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(href), 1500);
+    const mail = `mailto:?subject=${encodeURIComponent(drop.title)}&body=${encodeURIComponent(`Drop: 20 Nov 2026, 10:00 AM ET (18:00 TSİ)\n\n${stores}\n\n${page}`)}`;
+    window.open(mail, "_blank");
+    snack(t("dropIcsOk"));
+  }
+  function pingDropLogin() {
+    const drops = activeDrops();
+    if (!drops.length) {
+      dropPingQueued = true;
+      return;
+    }
+    dropPingQueued = false;
+    drops.forEach((drop) => {
+      writeDropPref(drop, "notify", true);
+      if (dropRemain(drop.at) <= 0) fireDrop(drop, { late: true, toast: true, force: !dropWasFired(drop) });
+    });
+    armDropWatch();
   }
 
   function headers(extra = {}) {
@@ -671,8 +1137,9 @@
       headers: headers({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
     });
-    if (!r.ok) throw new Error(name);
-    return r.json();
+    const text = await r.text();
+    if (!r.ok) throw Object.assign(new Error(name), { status: r.status, body: text });
+    return text ? JSON.parse(text) : null;
   }
 
   async function auth(path, body) {
@@ -709,6 +1176,7 @@
     state.me = null;
     state.liked = new Set();
     state.saved = new Set();
+    state.savedPieces = new Set();
     state.followed = new Set();
     state.starFollowed = false;
     localStorage.removeItem("tw.session");
@@ -760,7 +1228,7 @@
         isPublic: row.is_public !== false,
         isPremium: row.is_premium === true || row.is_premium === "true",
       };
-      await Promise.all([pullMyLikes(), pullMySaves(), pullMyFollows(), pullHypes()]);
+      await Promise.all([pullMyLikes(), pullMySaves(), pullMyPieceSaves(), pullMyFollows(), pullHypes()]);
     } catch {
       /* keep token; catalog still works */
     }
@@ -837,11 +1305,12 @@
     await persistNick(username);
   }
 
-  async function afterAuth(nick) {
+  async function afterAuth(nick, opt = {}) {
     if (nick) stashNick(nick);
     await hydrateMe();
     await ensureProfile(nick);
     await hydrateMe();
+    if (opt.pingDrop) pingDropLogin();
   }
 
   function saveStoreKey() {
@@ -867,6 +1336,34 @@
     } catch { /* table or rls — local still holds */ }
     state.saved = local;
     writeLocalSaves();
+  }
+  function pieceSaveKey() {
+    return state.me?.id ? `tw.savedPieces.${state.me.id}` : "";
+  }
+  function readLocalPieceSaves() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(pieceSaveKey()) || "[]");
+      return Array.isArray(raw) ? raw.map((id) => String(id)) : [];
+    } catch { return []; }
+  }
+  function writeLocalPieceSaves() {
+    const key = pieceSaveKey();
+    if (!key) return;
+    try { localStorage.setItem(key, JSON.stringify([...state.savedPieces])); } catch {}
+  }
+  function isPieceSaved(p) {
+    const id = String(p?.id || p || "");
+    return !!id && state.savedPieces.has(id);
+  }
+  async function pullMyPieceSaves() {
+    if (!logged()) return;
+    const local = new Set(readLocalPieceSaves());
+    try {
+      const rows = await sb("user_saved_items", `select=item_id&user_id=eq.${state.me.id}`);
+      for (const r of rows || []) if (r.item_id) local.add(String(r.item_id));
+    } catch { /* table optional — local still holds */ }
+    state.savedPieces = local;
+    writeLocalPieceSaves();
   }
   async function pullMyLikes() {
     if (!logged()) return;
@@ -941,6 +1438,34 @@
       } catch { /* empty */ }
     }
   }
+  async function pullFollowCounts() {
+    try {
+      const rows = await rpc("wears_artist_follow_counts");
+      const map = {};
+      for (const row of rows || []) {
+        const id = String(row.artist_id || row.artistId || "");
+        if (id) map[id] = Number(row.follows || 0);
+      }
+      state.followCounts = map;
+      return;
+    } catch { /* RLS hides other rows from a member token — count with the public key */ }
+    try {
+      const r = await fetch(`${SB}/rest/v1/user_follows_artist?select=artist_id`, {
+        headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, Range: "0-9999", Prefer: "count=exact" },
+      });
+      const rows = r.ok ? await r.json() : [];
+      const map = {};
+      for (const row of rows || []) {
+        const id = String(row.artist_id || "");
+        if (id) map[id] = (map[id] || 0) + 1;
+      }
+      state.followCounts = map;
+    } catch { /* empty */ }
+  }
+  function followerCount(a) {
+    if (!a?.id) return 0;
+    return Math.max(0, Number(state.followCounts[a.id] || 0));
+  }
   async function pullHypes() {
     try {
       const rows = await sb("drip_news_hypes", "select=news_id,user_id");
@@ -957,6 +1482,37 @@
       if (uid) state.hyped = mine;
     } catch { /* rls / missing table */ }
   }
+  function mapComment(row, fallbackName = "MEMBER") {
+    return {
+      id: String(row.id || ""),
+      userId: String(row.user_id || ""),
+      text: row.text || "",
+      at: stamp(row),
+      name: nickOf(row.username) || fallbackName,
+      avatar: row.avatar_url || "",
+      isPublic: true,
+      isPremium: false,
+    };
+  }
+  async function decorateCommenters(list) {
+    const ids = [...new Set((list || []).map((c) => c.userId).filter(isUuid))];
+    if (!ids.length) return;
+    let rows = [];
+    try {
+      rows = await sb("wears_public_nicks", `select=id,username,profile_image_url,is_public,is_premium,is_frozen&id=in.(${ids.join(",")})`) || [];
+    } catch {
+      try { rows = await rpc("wears_nicks", { ids }) || []; } catch { rows = []; }
+    }
+    const byId = Object.fromEntries((rows || []).map((r) => [String(r.id || "").toLowerCase(), r]));
+    for (const c of list) {
+      const row = byId[String(c.userId).toLowerCase()];
+      if (!row) continue;
+      c.name = nickOf(row.username) || c.name;
+      c.avatar = row.profile_image_url || c.avatar;
+      c.isPublic = row.is_public !== false && row.is_public !== "false" && row.is_frozen !== true && row.is_frozen !== "true";
+      c.isPremium = row.is_premium === true || row.is_premium === "true";
+    }
+  }
   async function pullComments(ids) {
     const want = [...new Set(ids.filter(Boolean))];
     if (!want.length) return;
@@ -966,14 +1522,7 @@
       for (const id of want) state.comments[id] = [];
       for (const row of rows || []) {
         const id = String(row.outfit_id);
-        (state.comments[id] ||= []).push({
-          id: String(row.id),
-          userId: String(row.user_id),
-          text: row.text || "",
-          at: stamp(row),
-          name: nickOf(row.username) || "MEMBER",
-          avatar: row.avatar_url || "",
-        });
+        (state.comments[id] ||= []).push(mapComment(row));
       }
     } catch {
       try {
@@ -981,17 +1530,185 @@
         for (const id of want) state.comments[id] = [];
         for (const row of rows || []) {
           const id = String(row.outfit_id);
-          (state.comments[id] ||= []).push({
-            id: String(row.id),
-            userId: String(row.user_id),
-            text: row.text || "",
-            at: stamp(row),
-            name: "MEMBER",
-            avatar: "",
-          });
+          (state.comments[id] ||= []).push(mapComment(row));
         }
       } catch { /* none */ }
     }
+    const all = want.flatMap((id) => state.comments[id] || []);
+    await decorateCommenters(all);
+  }
+
+  function isUuid(v) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v || ""));
+  }
+  function putPerson(p) {
+    if (!p) return;
+    if (p.id) state.people[String(p.id).toLowerCase()] = p;
+    const n = nickOf(p.username);
+    if (n) state.people[n] = p;
+  }
+  function getPerson(key) {
+    const k = String(key || "");
+    if (!k) return null;
+    return state.people[k] || state.people[k.toLowerCase()] || state.people[nickOf(k)] || null;
+  }
+  function isSelfMember(id, nick) {
+    if (!logged() || !state.me) return false;
+    if (id && String(id) === String(state.me.id)) return true;
+    const n = nickOf(nick);
+    return !!(n && n === nickOf(state.me.username));
+  }
+  function memberHref(id, nick) {
+    const n = nickOf(nick);
+    const slug = n && n !== "MEMBER" ? n : String(id || n || "");
+    return `#/u/${encodeURIComponent(slug)}`;
+  }
+  function openMember(id, nick, extra = {}) {
+    hideSheet();
+    hideDlg();
+    if (isSelfMember(id, nick)) { go("#/account"); return; }
+    const hint = {
+      id: String(id || ""),
+      nick: nickOf(nick),
+      avatar: extra.avatar || "",
+      isPublic: extra.isPublic !== false,
+      isPremium: extra.isPremium === true,
+    };
+    state.personHint = hint;
+    if (hint.id || hint.nick) {
+      const have = getPerson(hint.id) || getPerson(hint.nick);
+      if (!have?.ready) {
+        putPerson({
+          ready: false,
+          missing: false,
+          id: hint.id,
+          username: hint.nick || "MEMBER",
+          avatar: hint.avatar,
+          isPublic: hint.isPublic,
+          isPremium: hint.isPremium,
+          frozen: false,
+          followed: [],
+          comments: [],
+        });
+      }
+    }
+    const href = memberHref(id, nick);
+    if (href === "#/u/") return;
+    go(href);
+  }
+  function mapPerson(row) {
+    if (!row) return null;
+    return {
+      ready: true,
+      missing: false,
+      id: String(row.id || ""),
+      username: nickOf(row.username) || "MEMBER",
+      avatar: row.profile_image_url || row.avatar_url || row.avatar || "",
+      isPublic: row.is_public !== false && row.is_public !== "false",
+      isPremium: row.is_premium === true || row.is_premium === "true",
+      frozen: row.is_frozen === true || row.is_frozen === "true",
+      followed: [],
+      comments: [],
+    };
+  }
+  async function fetchPersonRow(key, hint = {}) {
+    const id = isUuid(key) ? key : (isUuid(hint.id) ? hint.id : "");
+    const nick = nickOf(isUuid(key) ? hint.nick : key) || nickOf(hint.nick);
+    const tries = [];
+    const first = (p) => p.then((rows) => Array.isArray(rows) ? rows[0] : rows).catch(() => null);
+    if (id) {
+      tries.push(first(sb("wears_public_nicks", `select=id,username,profile_image_url,is_public,is_premium,is_frozen&id=eq.${id}`)));
+      tries.push(first(rpc("wears_nicks", { ids: [id] })));
+    }
+    if (nick && nick !== "MEMBER") {
+      tries.push(first(rpc("wears_public_member", { nick })));
+      tries.push(first(sb("wears_public_nicks", `select=id,username,profile_image_url,is_public,is_premium,is_frozen&username=eq.${encodeURIComponent(nick)}`)));
+    }
+    if (!tries.length) return null;
+    const hits = await Promise.all(tries);
+    return hits.find((row) => row && (row.id || row.username)) || null;
+  }
+  function commentsByUser(userId) {
+    const mine = [];
+    if (!userId) return mine;
+    for (const id of Object.keys(state.comments)) {
+      for (const c of state.comments[id]) if (String(c.userId) === String(userId)) mine.push(c);
+    }
+    return mine;
+  }
+  async function pullMemberComments(userId) {
+    const local = commentsByUser(userId);
+    try {
+      const rows = await sb("comments", `select=id,user_id,text,created_at,outfit_id,username,avatar_url&user_id=eq.${userId}&order=created_at.desc`);
+      return (rows || []).slice(0, 12).map((row) => ({
+        id: String(row.id),
+        userId: String(row.user_id),
+        text: row.text || "",
+        at: stamp(row),
+        name: nickOf(row.username) || "MEMBER",
+        avatar: row.avatar_url || "",
+      }));
+    } catch {
+      return local.slice(0, 12);
+    }
+  }
+  async function pullMemberFollows(userId) {
+    try {
+      const rows = await rpc("wears_public_follows", { p_user_id: userId });
+      const names = [];
+      for (const r of rows || []) {
+        const a = artistById(r.artist_id);
+        const n = up(r.artist_name || a?.name || "");
+        if (n && !names.includes(n)) names.push(n);
+      }
+      return names;
+    } catch { return []; }
+  }
+  const memberLoads = {};
+  function memberStillOpen(key) {
+    const loc = hash();
+    if (loc.path !== "u") return false;
+    const a = nickOf(loc.id) || loc.id;
+    const b = nickOf(key) || String(key || "");
+    return a === b || String(loc.id) === String(key);
+  }
+  async function pullMember(key) {
+    const hint = state.personHint || {};
+    const token = String(key || hint.nick || hint.id || "");
+    if (!token) return;
+    const cached = getPerson(token);
+    if (cached?.ready) return cached;
+    if (memberLoads[token]) return memberLoads[token];
+    memberLoads[token] = (async () => {
+      try {
+        const row = await fetchPersonRow(token, hint);
+        const person = mapPerson(row);
+        if (!person || !person.id) {
+          putPerson({ ready: true, missing: true, id: token, username: nickOf(token) || nickOf(hint.nick) });
+          return getPerson(token);
+        }
+        if (person.frozen) person.isPublic = false;
+        if (person.isPublic) {
+          const [followed, comments] = await Promise.all([
+            pullMemberFollows(person.id),
+            pullMemberComments(person.id),
+          ]);
+          person.followed = followed;
+          person.comments = comments;
+        } else {
+          person.followed = [];
+          person.comments = [];
+        }
+        putPerson(person);
+        return person;
+      } catch {
+        putPerson({ ready: true, missing: true, id: token, username: nickOf(token) || nickOf(hint.nick) });
+        return getPerson(token);
+      } finally {
+        delete memberLoads[token];
+      }
+    })();
+    return memberLoads[token];
   }
 
   async function load() {
@@ -1007,10 +1724,12 @@
       applyFits(outfits);
       state.pieces = items.map(mapPiece).filter((p) => !p.isVault);
       state.news = (news || []).map(mapNews);
+      if (dropPingQueued) pingDropLogin();
       state.ready = true;
       state.fail = false;
       await Promise.all([
         pullLikeCounts(),
+        pullFollowCounts(),
         pullHypes(),
         pullComments(state.fits.slice(0, 24).map((f) => f.id)),
         logged() ? pullMyFollows() : null,
@@ -1044,7 +1763,8 @@
       if (news) state.news = (news || []).map(mapNews);
       const fitsChanged = catalogIds(state.fits) !== prevFits;
       const newsChanged = catalogIds(state.news) !== prevNews;
-      if (!fitsChanged && !newsChanged) return;
+      const prevFollow = JSON.stringify(state.followCounts);
+      armDropWatch();
       if (fitsChanged) {
         try {
           const items = await sb("items", "select=*");
@@ -1053,8 +1773,11 @@
         pullLikeCounts();
         pullComments(state.fits.slice(0, 24).map((f) => f.id));
       }
+      await pullFollowCounts();
+      const followChanged = JSON.stringify(state.followCounts) !== prevFollow;
+      if (!fitsChanged && !newsChanged && !followChanged) return;
       const path = hash().path;
-      if ((fitsChanged && !path) || (newsChanged && path === "news")) render();
+      if ((fitsChanged && !path) || (newsChanged && path === "news") || (followChanged && (path === "s" || path === "stars"))) render();
     } catch { /* keep */ }
     finally { pulseBusy = false; }
   }
@@ -1191,7 +1914,7 @@
   function hideDlg() { $("#dlg").hidden = true; $("#dlg").innerHTML = ""; }
 
   function needAuth(kind) {
-    const body = kind === "comment" ? t("authComment") : kind === "follow" ? t("authFollow") : kind === "hype" ? t("authHype") : kind === "save" ? t("authSave") : t("authLike");
+    const body = kind === "comment" ? t("authComment") : kind === "follow" ? t("authFollow") : kind === "hype" ? t("authHype") : kind === "savePiece" ? t("authSavePiece") : kind === "save" ? t("authSave") : t("authLike");
     showDlg(`
       <h2>${I.key} ${t("authTitle")}</h2>
       <p>${esc(body).replace(/\n/g, "<br>")}</p>
@@ -1448,14 +2171,18 @@
     }
   }
   function archiveCard(p) {
-    return `<button class="acard" type="button" data-go="#/p/${encodeURIComponent(p.id)}">
-      <div class="acard-pic">${p.imageUrl ? `<img src="${esc(p.imageUrl)}" alt="">` : ""}</div>
-      <div class="acard-copy">
-        <em>${esc(p.brand)}</em>
-        <strong>${esc(p.name)}</strong>
-        <b>${esc(p.price)}</b>
-      </div>
-    </button>`;
+    const on = isPieceSaved(p);
+    return `<div class="acard-wrap">
+      <button class="acard" type="button" data-go="#/p/${encodeURIComponent(p.id)}">
+        <div class="acard-pic">${p.imageUrl ? `<img src="${esc(p.imageUrl)}" alt="">` : ""}</div>
+        <div class="acard-copy">
+          <em>${esc(p.brand)}</em>
+          <strong>${esc(p.name)}</strong>
+          <b>${esc(p.price)}</b>
+        </div>
+      </button>
+      <button class="acard-save ${on ? "is-on" : ""}" type="button" data-save-piece="${esc(p.id)}" aria-label="${t("pdSave")}">${on ? I.mark : I.markO}</button>
+    </div>`;
   }
   function brandPage(id) {
     const key = nickOf(id);
@@ -1477,14 +2204,18 @@
   }
 
   function pieceCard(p) {
-    return `<button class="pcard" type="button" data-go="#/p/${encodeURIComponent(p.id)}">
-      <div class="pcard-pic">${p.imageUrl ? `<img src="${esc(p.imageUrl)}" alt="">` : ""}</div>
-      <div class="pcard-copy">
-        <em>${esc(p.brand)}</em>
-        <strong>${esc(p.name)}</strong>
-      </div>
-      <span class="pcard-price">${esc(p.price)}</span>
-    </button>`;
+    const on = isPieceSaved(p);
+    return `<div class="pcard-wrap">
+      <button class="pcard" type="button" data-go="#/p/${encodeURIComponent(p.id)}">
+        <div class="pcard-pic">${p.imageUrl ? `<img src="${esc(p.imageUrl)}" alt="">` : ""}</div>
+        <div class="pcard-copy">
+          <em>${esc(p.brand)}</em>
+          <strong>${esc(p.name)}</strong>
+        </div>
+        <span class="pcard-price">${esc(p.price)}</span>
+      </button>
+      <button class="pcard-save ${on ? "is-on" : ""}" type="button" data-save-piece="${esc(p.id)}" aria-label="${t("pdSave")}">${on ? I.mark : I.markO}</button>
+    </div>`;
   }
   function carouselNav(n) {
     if (n < 2) return "";
@@ -1844,10 +2575,14 @@
           <button type="button" class="ig-handle" data-pick-photo>${t("changePhoto")}</button>
           <h1><input class="nick-inline" maxlength="18" value="${esc(me.username)}" placeholder="${esc(t("nick"))}" data-nick-input aria-label="${t("editNick")}"></h1>
           <p class="nick-guard" data-nick-guard>${esc(nickGuardCopy(me.username, { limit: true }))}</p>
+          <div class="mem-stamps">
+            <span class="stamp ${me.isPremium ? "is-fill" : ""}">${me.isPremium ? t("memPrem") : t("memBasic")}</span>
+            ${me.isPublic ? "" : `<span class="stamp">${t("memPrivate")}</span>`}
+          </div>
         </div>
       </article>
       <div class="account-stats">
-        <button type="button" data-go="#/saved"><em>${t("saved")}</em><b>${state.saved.size}</b></button>
+        <button type="button" data-go="#/saved"><em>${t("saved")}</em><b>${state.saved.size + state.savedPieces.size}</b></button>
         <div><em>${t("accComments")}</em><b>${mine.length}</b></div>
         <div><em>${t("accFollow")}</em><b>${followed.length}</b></div>
       </div>
@@ -1872,6 +2607,82 @@
           ${mine.length ? mine.slice(0, 8).map((c) => `<div class="comment">${ava(me.avatar, me.username)}<div><p>${esc(c.text)}</p><em>${esc(ago(c.at))}</em></div></div>`).join("") : `<p class="empty">${t("commentsEmpty")}</p>`}
         </div>
       </section>
+    </div>`;
+  }
+
+  function memberPage(key) {
+    const hint = state.personHint || {};
+    if (isSelfMember(isUuid(key) ? key : hint.id, isUuid(key) ? hint.nick : key)) return accountPage();
+    const person = getPerson(key) || getPerson(hint.id) || getPerson(hint.nick);
+    if (!person?.ready) {
+      pullMember(key).then(() => { if (memberStillOpen(key)) render(); });
+      const name = person?.username || nickOf(key) || nickOf(hint.nick) || "MEMBER";
+      const avatar = person?.avatar || hint.avatar || "";
+      if (!name || name === "MEMBER") {
+        return `<div class="acc-page mem-page"><p class="empty">${t("connecting")}</p></div>`;
+      }
+      return `<div class="acc-page mem-page">
+        <div class="back-row"><button class="sq" type="button" data-back>${I.back}</button></div>
+        <article class="plate acc-plate">
+          <header class="plate-head"><span class="plate-head-lbl">${t("plate")}</span></header>
+          <div class="plate-body">
+            ${ava(avatar, name, "ava lg")}
+            <h1 class="mem-name">${esc(name)}</h1>
+          </div>
+        </article>
+        <p class="empty">${t("connecting")}</p>
+      </div>`;
+    }
+    if (person.missing) {
+      return `<div class="acc-page mem-page">
+        <div class="back-row"><button class="sq" type="button" data-back>${I.back}</button></div>
+        <p class="empty">${t("memNone")}</p>
+      </div>`;
+    }
+    const open = person.isPublic !== false && !person.frozen;
+    const comments = person.comments || [];
+    const followed = person.followed || [];
+    return `<div class="acc-page mem-page">
+      <div class="back-row"><button class="sq" type="button" data-back>${I.back}</button></div>
+      <article class="plate acc-plate">
+        <header class="plate-head"><span class="plate-head-lbl">${t("plate")}</span></header>
+        <div class="plate-body">
+          ${ava(person.avatar, person.username, "ava lg")}
+          <h1 class="mem-name">${esc(person.username)}</h1>
+          <div class="mem-stamps">
+            <span class="stamp ${person.isPremium ? "is-fill" : ""}">${person.isPremium ? t("memPrem") : t("memBasic")}</span>
+            ${open ? "" : `<span class="stamp">${t("memPrivate")}</span>`}
+          </div>
+        </div>
+      </article>
+      <div class="account-stats">
+        <div><em>${t("saved")}</em><b>0</b></div>
+        <div><em>${t("accComments")}</em><b>${open ? comments.length : "0"}</b></div>
+        <div><em>${t("accFollow")}</em><b>${open ? followed.length : "0"}</b></div>
+      </div>
+      ${open ? `
+        <section class="acc-block">
+          <p class="kicker">${t("memFollowed")}</p>
+          <div class="acc-list">
+            ${followed.length ? followed.map((n) => {
+              const a = artistByName(n);
+              return `<button class="followed-row" type="button" data-go="#/s/${encodeURIComponent(n)}">${ava(a?.imageUrl, n, "ava")}<span>${esc(n)}</span>${I.fwd}</button>`;
+            }).join("") : `<p class="empty">${t("noFollow")}</p>`}
+          </div>
+        </section>
+        <section class="acc-block">
+          <p class="kicker">${t("accComments")}</p>
+          <div class="acc-list">
+            ${comments.length ? comments.slice(0, 8).map((c) => `<div class="comment">${ava(person.avatar, person.username)}<div><p>${esc(c.text)}</p><em>${esc(ago(c.at))}</em></div></div>`).join("") : `<p class="empty">${t("commentsEmpty")}</p>`}
+          </div>
+        </section>
+      ` : `
+        <div class="mem-lock">
+          ${I.lock}
+          <p class="kicker">${t("memPrivate")}</p>
+          <p>${t("memPrivateD")}</p>
+        </div>
+      `}
     </div>`;
   }
 
@@ -1903,15 +2714,45 @@
     </div>`;
   }
 
+  function savedFitCard(f) {
+    const guest = f.guestArtistName && f.guestArtistName !== f.artistName ? f.guestArtistName : "";
+    return `<button class="saved-fit" type="button" data-go="#/f/${encodeURIComponent(f.id)}">
+      <div class="saved-fit-pic">${f.imageUrl ? `<img src="${esc(f.imageUrl)}" alt="">` : ""}</div>
+      <div class="saved-fit-copy">
+        <em>${esc(guest ? `${f.artistName} × ${guest}` : f.artistName || "")}</em>
+        <strong>${esc(f.title ? up(f.title) : ago(f.date) || t("savedFits"))}</strong>
+      </div>
+    </button>`;
+  }
   function savedPage() {
     if (!logged()) return joinPage();
     const fits = state.fits.filter((f) => state.saved.has(f.id));
-    return `<div class="set-page">
-      <div class="back-row"><button class="sq" type="button" data-go="#/settings">${I.back}</button><h1 class="set-title">${t("saved")}</h1><span class="sq is-ghost" aria-hidden="true"></span></div>
-      <p class="hint set-hint">${esc(t("savedHint"))}</p>
-      ${fits.length ? `<div class="grid3">${fits.map((f) => `
-        <button type="button" data-go="#/f/${encodeURIComponent(f.id)}">${f.imageUrl ? `<img src="${esc(f.imageUrl)}" alt="">` : ""}</button>
-      `).join("")}</div>` : `<p class="empty">${t("savedEmpty")}</p>`}
+    const pieces = state.pieces.filter((p) => state.savedPieces.has(p.id));
+    const total = fits.length + pieces.length;
+    return `<div class="saved-page">
+      <div class="back-row"><button class="sq" type="button" data-go="#/settings">${I.back}</button></div>
+      <header class="stars-mast">
+        <div class="stars-lockup">
+          <p class="kicker">${t("savedHint")}</p>
+          <h1 class="display-title">${t("saved")}</h1>
+        </div>
+        <div class="stars-count">
+          <b>${String(total).padStart(2, "0")}</b>
+          <span>${t("saved")}</span>
+        </div>
+      </header>
+      <p class="saved-net">${esc(t("savedNet"))}</p>
+      ${!total ? `<p class="empty">${t("savedEmpty")}</p>` : ""}
+      ${fits.length ? `<section class="saved-block">
+        <div class="saved-head"><p class="kicker">${t("savedFits")}</p><span>${String(fits.length).padStart(2, "0")}</span></div>
+        <hr class="rule">
+        <div class="saved-grid">${fits.map(savedFitCard).join("")}</div>
+      </section>` : ""}
+      ${pieces.length ? `<section class="saved-block">
+        <div class="saved-head"><p class="kicker">${t("savedPieces")}</p><span>${String(pieces.length).padStart(2, "0")}</span></div>
+        <hr class="rule">
+        <div class="saved-grid is-pieces">${pieces.map(archiveCard).join("")}</div>
+      </section>` : total ? `<p class="empty">${t("savedEmptyPieces")}</p>` : ""}
     </div>`;
   }
 
@@ -1954,7 +2795,7 @@
         </div>
       </article>
       <div class="stats">
-        <div><em>${t("followers")}</em><b>—</b></div>
+        <div><em>${t("followers")}</em><b>${followerCount(a)}</b></div>
         <div><em>${t("fits")}</em><b>${fits.length}</b></div>
       </div>
       <div class="grid3">${fits.map((f) => `
@@ -2256,6 +3097,7 @@
             <div class="product-row"><h1>${esc(p.name)}</h1><b>${esc(p.price)}</b></div>
             ${p.colorway && !p.colorway.includes("#") ? `<p class="kicker product-color">${esc(p.colorway)}</p>` : ""}
             ${!can ? `<p class="kicker product-status">${esc(availLabel(status))}</p>` : ""}
+            <button class="save-bar ${isPieceSaved(p) ? "is-on" : ""}" type="button" data-save-piece="${esc(p.id)}">${isPieceSaved(p) ? I.mark : I.markO}<span>${t("pdSave")}</span></button>
             ${can && href ? `<a class="visit" href="${esc(href)}" target="_blank" rel="noopener" data-visit>${esc(visitLabel)}</a>` : `<span class="visit is-off">${esc(visitLabel)}</span>`}
             ${rows.length ? `<p class="kicker product-k">${t("best")}</p><div class="stores">${rows.map((r) => {
               const inner = `<span class="store-name">${esc(r.store)}</span><span class="store-price">${esc(r.price)}</span>${listingTag(r.status)}`;
@@ -2301,6 +3143,7 @@
       <h1>${esc(n.title)}</h1>
       <p class="article-by">${esc(n.source)} · ${esc(ago(n.createdAt))}</p>
       ${n.photos.length ? `<div class="news-pager" data-car="${n.photos.length}">${n.photos.map((u, i) => imgTag(u, n.title, `class="${newsPlateClass(u)}" data-i="${i}"${i ? " hidden" : ""}`)).join("")}${carouselNav(n.photos.length)}</div>` : ""}
+      ${dropBox(n)}
       ${hasProduct ? `<div class="spec">
         <div class="spec-row"><em>NAME</em><span>${esc(n.productName || "—")}</span></div>
         <div class="spec-row"><em>SKU</em><span>${esc(n.sku || "—")}</span></div>
@@ -2311,13 +3154,19 @@
       ${body ? `<p class="body">${esc(body)}</p>` : ""}
       <div class="news-tools">
         ${hypeBox(n.id)}
-        ${href ? `<a class="buy-bar" href="${esc(href)}" target="_blank" rel="noopener" data-visit>${t("buy")}</a>` : ""}
+        ${href && !n.drop ? `<a class="buy-bar" href="${esc(href)}" target="_blank" rel="noopener" data-visit>${t("buy")}</a>` : ""}
       </div>
     </article>`;
   }
 
   function paintComments(id) {
     const rows = state.comments[id] || [];
+    const form = logged()
+      ? `<form class="comment-box" data-comment-form="${esc(id)}">
+          <input name="text" maxlength="280" placeholder="${t("commentHint")}" autocomplete="off">
+          <button type="submit">${t("post")}</button>
+        </form>`
+      : `<button class="comment-login" type="button" data-go="#/join">${t("authJoin")}</button>`;
     showSheet(`
       <div class="comments-sheet">
         <div class="sheet-head">
@@ -2325,20 +3174,24 @@
           <p>${t("comments")} (${rows.length})</p>
           <button type="button" data-close aria-label="close">${I.close}</button>
         </div>
-        <div class="comments">${rows.length ? rows.map((c) => `
-          <div class="comment">${ava(c.avatar, c.name)}<div><p><b>${esc(c.name)}</b> ${esc(c.text)}</p><em>${esc(ago(c.at))}</em></div></div>
-        `).join("") : `<p class="empty">${t("noComments")}</p>`}</div>
-        <form class="comment-box" data-comment-form="${esc(id)}">
-          <input name="text" maxlength="280" placeholder="${t("commentHint")}" autocomplete="off">
-          <button type="submit">${t("post")}</button>
-        </form>
+        <div class="comments">${rows.length ? rows.map((c) => {
+          const self = isSelfMember(c.userId, c.name);
+          const href = self ? "#/account" : memberHref(c.userId, c.name);
+          const locked = !self && c.isPublic === false;
+          return `<a class="comment is-person" href="${esc(href)}" data-member="${esc(c.userId)}" data-member-nick="${esc(c.name)}" data-member-ava="${esc(c.avatar || "")}" data-member-public="${locked ? "0" : "1"}" data-member-prem="${c.isPremium ? "1" : "0"}">
+            ${ava(c.avatar, c.name)}
+            <div><p><b>${esc(c.name)}</b>${locked ? `<i class="mem-mini-lock">${I.lock}</i>` : ""} ${esc(c.text)}</p><em>${esc(ago(c.at))}</em></div>
+            ${I.fwd}
+          </a>`;
+        }).join("") : `<p class="empty">${t("noComments")}</p>`}</div>
+        ${form}
       </div>
     `);
   }
   async function commentsSheet(id) {
     paintComments(id);
     await pullComments([id]);
-    if ($("[data-comment-form]")?.dataset.commentForm === id) paintComments(id);
+    if ($("#sheet") && !$("#sheet").hidden && $("#sheet").querySelector(".comments-sheet")) paintComments(id);
   }
 
   function playBurst(id, kind) {
@@ -2386,6 +3239,23 @@
     }
   }
 
+  async function toggleSavePiece(id) {
+    if (!logged()) { needAuth("savePiece"); return; }
+    const key = String(id || "");
+    if (!key) return;
+    const on = !state.savedPieces.has(key);
+    if (on) state.savedPieces.add(key); else state.savedPieces.delete(key);
+    writeLocalPieceSaves();
+    render();
+    snack(on ? t("pieceSaved") : t("pieceRemoved"));
+    try {
+      if (on) await sb("user_saved_items", "", { method: "POST", body: { user_id: state.me.id, item_id: key }, prefer: "return=minimal" });
+      else await sb("user_saved_items", `user_id=eq.${state.me.id}&item_id=eq.${key}`, { method: "DELETE", prefer: "return=minimal" });
+    } catch {
+      /* local piece save still holds */
+    }
+  }
+
   async function toggleHype(id, on) {
     if (!logged()) { needAuth("hype"); return; }
     if (!id) return;
@@ -2416,6 +3286,7 @@
       }
     }
     writeLocalFollows();
+    if (a.id) state.followCounts[a.id] = Math.max(0, (state.followCounts[a.id] || 0) + (on ? 1 : -1));
     render();
     const userId = meId();
     if (!userId || !a.id) return;
@@ -2423,8 +3294,10 @@
       if (on) await sb("user_follows_artist", "", { method: "POST", body: { user_id: userId, artist_id: a.id }, prefer: "return=minimal" });
       else await sb("user_follows_artist", `user_id=eq.${userId}&artist_id=eq.${a.id}`, { method: "DELETE", prefer: "return=minimal" });
     } catch (e) {
-      if (on && isUniqueErr(e)) return;
+      if (!(on && isUniqueErr(e))) { /* local follow still holds */ }
     }
+    await pullFollowCounts();
+    render();
   }
 
   async function postComment(id, text) {
@@ -2452,7 +3325,7 @@
     try {
       const data = await auth("token?grant_type=password", { email: email.trim(), password });
       saveSession(data);
-      await afterAuth();
+      await afterAuth(undefined, { pingDrop: true });
       state.busy = false;
       go("#/");
     } catch (e) {
@@ -2520,7 +3393,7 @@
         go("#/verify");
         return;
       }
-      await afterAuth(nick);
+      await afterAuth(nick, { pingDrop: true });
       if (logged()) state.region = state.contentRegion;
       state.busy = false;
       go("#/account");
@@ -2564,7 +3437,7 @@
       else if (data.session?.access_token) saveSession(data.session);
       if (!logged()) throw new Error("verify");
       clearVerify();
-      await afterAuth(pendingNick());
+      await afterAuth(pendingNick(), { pingDrop: true });
       state.busy = false;
       go("#/account");
     } catch {
@@ -2639,7 +3512,7 @@
         expires_at: hashBits.get("expires_at"),
       });
       stripAuthUrl();
-      await afterAuth();
+      await afterAuth(undefined, { pingDrop: true });
       const kind = hashBits.get("type");
       return kind === "recovery" || kind === "signup" || kind === "email" ? "account" : "home";
     }
@@ -2656,7 +3529,7 @@
         localStorage.removeItem("tw.pkce");
         sessionStorage.removeItem("tw.pkce");
         stripAuthUrl();
-        await afterAuth();
+        await afterAuth(undefined, { pingDrop: true });
         return "home";
       } catch {
         stripAuthUrl();
@@ -2680,7 +3553,7 @@
         if (!logged()) throw new Error("verify");
         clearVerify();
         stripAuthUrl();
-        await afterAuth(pendingNick());
+        await afterAuth(pendingNick(), { pingDrop: true });
         return "account";
       } catch {
         stripAuthUrl();
@@ -2709,10 +3582,21 @@
   }
 
   async function setPublic(on) {
-    if (!logged()) return;
+    if (!logged() || !state.me) return;
+    const prev = state.me.isPublic;
     state.me.isPublic = on;
     render();
-    try { await sb("users", `id=eq.${state.me.id}`, { method: "PATCH", body: { is_public: on }, prefer: "return=minimal" }); } catch {}
+    try {
+      await rpc("wears_set_my_public", { visible: on });
+    } catch {
+      try {
+        await sb("users", `id=eq.${state.me.id}`, { method: "PATCH", body: { is_public: on }, prefer: "return=minimal" });
+      } catch {
+        state.me.isPublic = prev;
+        render();
+        snack(t("errAuth"));
+      }
+    }
   }
 
   function navGlyph(key, on) {
@@ -2853,6 +3737,7 @@
     else if (path === "login") html = loginPage();
     else if (path === "create") html = createPage();
     else if (path === "account") html = accountPage();
+    else if (path === "u") html = memberPage(id);
     else if (path === "settings") html = settingsPage();
     else if (path === "saved") html = savedPage();
     else if (path === "verify") html = verifyPage();
@@ -2893,6 +3778,8 @@
     bindTallies(view);
     bindMastAlign(view);
     paintChrome();
+    armDropWatch();
+    syncDropChrome(view);
   }
 
   function cycleRegion() {
@@ -2924,13 +3811,24 @@
     if (e.target.closest("[data-back]")) { e.preventDefault(); history.back(); return; }
     const like = e.target.closest("button[data-like]")?.dataset.like;
     if (like) { e.preventDefault(); toggleLike(like); return; }
+    const memEl = e.target.closest("[data-member]");
+    if (memEl) {
+      e.preventDefault();
+      openMember(memEl.dataset.member, memEl.dataset.memberNick, {
+        avatar: memEl.dataset.memberAva,
+        isPublic: memEl.dataset.memberPublic !== "0",
+        isPremium: memEl.dataset.memberPrem === "1",
+      });
+      return;
+    }
     const com = e.target.closest("[data-comment]")?.dataset.comment;
     if (com) {
       e.preventDefault();
-      if (!logged()) { needAuth("comment"); return; }
       commentsSheet(com);
       return;
     }
+    const savePiece = e.target.closest("[data-save-piece]")?.dataset.savePiece;
+    if (savePiece) { e.preventDefault(); toggleSavePiece(savePiece); return; }
     const save = e.target.closest("[data-save]")?.dataset.save;
     if (save) { e.preventDefault(); toggleSave(save); return; }
     if (e.target.closest("[data-resend-verify]")) { e.preventDefault(); resendVerify(); return; }
@@ -2946,6 +3844,37 @@
         </div>
       `);
       return;
+    }
+    if (e.target.closest("[data-close-drop-toast]")) {
+      e.preventDefault();
+      document.querySelector(".drop-toast")?.remove();
+      return;
+    }
+    const dropAuto = e.target.closest("[data-drop-auto]");
+    if (dropAuto) {
+      e.preventDefault();
+      toggleDropAuto(dropAuto.closest("[data-drop]")?.dataset.drop);
+      return;
+    }
+    const dropNotify = e.target.closest("[data-drop-notify]");
+    if (dropNotify) {
+      e.preventDefault();
+      toggleDropNotify(dropNotify.closest("[data-drop]")?.dataset.drop);
+      return;
+    }
+    const dropIcs = e.target.closest("[data-drop-ics]");
+    if (dropIcs) {
+      e.preventDefault();
+      downloadDropIcs(dropIcs.closest("[data-drop]")?.dataset.drop);
+      return;
+    }
+    const dropPick = e.target.closest("[data-drop-pick]");
+    if (dropPick) {
+      setDropStoreFromEvent(dropPick.closest("[data-drop]")?.dataset.drop, dropPick.dataset.dropPick);
+      if (dropPick.tagName !== "A") {
+        e.preventDefault();
+        return;
+      }
     }
     const hypeEl = e.target.closest("[data-hype]");
     if (hypeEl) {
