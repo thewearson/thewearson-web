@@ -96,6 +96,8 @@
       terms1: "By creating an account, you agree to our ", terms2: "Terms of Service", terms3: " and ", terms4: "Privacy Policy.",
       errFields: "YOU MUST FILL IN ALL THE FIELDS.",
       errAuth: "LOGIN FAILED.", errSignup: "ACCOUNT COULD NOT BE CREATED.",
+      errAppleWeb: "APPLE SIGN-IN ON THE WEB IS NOT CONNECTED YET. USE EMAIL, GOOGLE, OR THE iOS APP.",
+      errGoogle: "GOOGLE DID NOT ALLOW THIS SIGN-IN.",
       confirm: "CHECK YOUR EMAIL TO CONFIRM THE ACCOUNT.",
       inUse: "THIS EMAIL IS ALREADY REGISTERED.",
       nickTaken: "THAT NICKNAME IS TAKEN.", nickInvalid: "3–18 LETTERS OR NUMBERS.",
@@ -216,6 +218,8 @@
       terms1: "Hesap oluşturarak şunları kabul etmiş olursunuz: ", terms2: "Kullanım Koşulları", terms3: " ve ", terms4: "Gizlilik Politikası.",
       errFields: "TÜM ALANLARI DOLDURMANIZ GEREKİYOR.",
       errAuth: "GİRİŞ BAŞARISIZ.", errSignup: "HESAP AÇILAMADI.",
+      errAppleWeb: "WEB’DE APPLE GİRİŞİ HENÜZ BAĞLI DEĞİL. E-POSTA, GOOGLE VEYA iOS UYGULAMASINI KULLAN.",
+      errGoogle: "GOOGLE BU GİRİŞE İZİN VERMEDİ.",
       confirm: "HESABI ONAYLAMAK İÇİN E-POSTANIZI KONTROL EDİN.",
       inUse: "BU E-POSTA ZATEN KAYITLI.",
       nickTaken: "BU NICKNAME ALINMIŞ.", nickInvalid: "3–18 HARF VEYA RAKAM.",
@@ -3640,23 +3644,35 @@
     snack(t("accDeactivated"));
   }
 
+  function oauthFailCopy(raw) {
+    const msg = decodeURIComponent(String(raw || "").replace(/\+/g, " ")).toLowerCase();
+    if (/missing oauth secret|unsupported provider/.test(msg)) return t("errAppleWeb");
+    if (/access_denied|forbidden|not verified|hasn.?t been verified|testing/.test(msg)) return t("errGoogle");
+    return t("errAuth");
+  }
+
   async function startOAuth(provider) {
     const rand = crypto.getRandomValues(new Uint8Array(32));
     const verifier = btoa(String.fromCharCode(...rand)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-    localStorage.setItem("tw.pkce", verifier);
-    sessionStorage.setItem("tw.pkce", verifier);
+    try {
+      localStorage.setItem("tw.pkce", verifier);
+      sessionStorage.setItem("tw.pkce", verifier);
+    } catch { /* private */ }
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
     const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
     const redirect = `${location.origin}/`;
     const href = `${SB}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(redirect)}&code_challenge=${encodeURIComponent(challenge)}&code_challenge_method=S256`;
-    try {
-      const r = await fetch(href, { redirect: "manual", headers: { apikey: KEY, Accept: "application/json" } });
-      if (r.status >= 400 && r.status < 500) {
-        state.authErr = t("errAuth");
-        render();
-        return;
-      }
-    } catch {}
+    if (provider === "apple") {
+      try {
+        const r = await fetch(href, { redirect: "manual", headers: { apikey: KEY, Accept: "application/json" } });
+        if (r.status >= 400) {
+          const data = await r.json().catch(() => ({}));
+          state.authErr = oauthFailCopy(data.msg || data.error_description || data.error);
+          render();
+          return;
+        }
+      } catch { /* still try the Apple redirect */ }
+    }
     location.href = href;
   }
 
@@ -3680,7 +3696,7 @@
     const code = q.get("code");
     if (err && !access && !code) {
       stripAuthUrl();
-      state.authErr = t("errAuth");
+      state.authErr = oauthFailCopy(err);
       return "join";
     }
     if (access) {
@@ -3710,9 +3726,9 @@
         stripAuthUrl();
         await afterAuth(undefined, { pingDrop: true });
         return "home";
-      } catch {
+      } catch (e) {
         stripAuthUrl();
-        state.authErr = t("errAuth");
+        state.authErr = oauthFailCopy(e?.message || e?.data?.error_description || e?.data?.msg);
         return "join";
       }
     }
