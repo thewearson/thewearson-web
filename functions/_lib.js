@@ -629,6 +629,13 @@ export async function dropNotifyResponse(request, env) {
   const email = cleanEmail(body.email);
   if (!email) return corsJson(request, 400, { error: "Email required." });
   const newsId = cleanNewsId(body.newsId, env);
+  if (body.off !== true) {
+    const live = await loadLiveDrop(env, newsId);
+    const at = Date.parse(live.at);
+    if (Number.isFinite(at) && Date.now() >= at) {
+      return corsJson(request, 410, { error: "Notify closed.", closed: true, newsId: packId(newsId, env) });
+    }
+  }
   const out = await upsertEmail(env, email, body.off === true, newsId);
   if (!out.ok) return corsJson(request, out.status, out.data);
   return corsJson(request, 200, { ok: true, on: body.off !== true, newsId, n: Number(out.data && out.data.n) || 0 });

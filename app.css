@@ -3364,6 +3364,8 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
   grid-template-columns: 1fr;
   border-top: var(--stroke) solid var(--ink);
 }
+.drop-box.is-live .drop-acts,
+.drop-acts[hidden] { display: none; }
 .drop-act {
   display: flex;
   align-items: center;

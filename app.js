@@ -160,6 +160,7 @@
       dropMailNeed: "ENTER YOUR EMAIL.",
       dropMailOk: "ARMED. THE WEARS ON MAILS YOU WHEN THE LOCK OPENS.",
       dropMailFail: "COULD NOT ARM EMAIL. TRY AGAIN.",
+      dropMailClosed: "NOTIFY IS CLOSED. THE DROP IS LIVE.",
       dropShop: "SHOP NOW",
       legalFooter: "© 2027 RACKSGRID",
       country: "COUNTRY", regionOpt: "CONTENT REGION (OPTIONAL)",
@@ -282,6 +283,7 @@
       dropMailNeed: "E-POSTANI YAZ.",
       dropMailOk: "TAMAM. KİLİT AÇILINCA THE WEARS ON MAIL ATAR.",
       dropMailFail: "E-POSTA KAYDEDİLEMEDİ. TEKRAR DENE.",
+      dropMailClosed: "NOTIFY KAPANDI. DROP AÇIK.",
       dropShop: "ŞİMDİ AL",
       legalFooter: "© 2027 RACKSGRID",
       country: "ÜLKE", regionOpt: "İÇERİK BÖLGESİ (OPSİYONEL)",
@@ -1032,9 +1034,9 @@
         <div class="drop-chips">${drop.stores.map((s) => `<button class="drop-chip ${prefs.store === s.id ? "is-on" : ""}" type="button" data-drop-pick="${esc(s.id)}">${esc(s.label)}</button>`).join("")}</div>
       </div>
       <div class="drop-buys">${drop.stores.map((s) => `<a class="drop-buy ${prefs.store === s.id ? "is-on" : ""}" href="${esc(s.url)}" target="_blank" rel="noopener" data-visit data-drop-pick="${esc(s.id)}">${esc(s.label)}</a>`).join("")}</div>
-      <div class="drop-acts">
+      ${parts.live ? "" : `<div class="drop-acts">
         <button class="drop-act ${prefs.notify ? "is-on" : ""}" type="button" data-drop-mail>${prefs.notify ? t("dropMailOn") : t("dropMail")}</button>
-      </div>
+      </div>`}
     </section>`;
   }
   function paintDropClock() {
@@ -1043,6 +1045,9 @@
       if (!drop) return;
       const parts = dropParts(dropRemain(drop.at));
       el.classList.toggle("is-live", parts.live);
+      const acts = el.querySelector(".drop-acts");
+      if (acts) acts.hidden = parts.live;
+      if (parts.live && document.querySelector(`[data-drop-mail-form="${drop.newsId}"]`)) hideSheet();
       const set = (k, v) => {
         const node = el.querySelector(`[data-drop-${k}]`);
         if (node) node.textContent = dropPad(v);
@@ -1235,7 +1240,7 @@
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok) return { ok: true, n: Number(data.n) || 0 };
-        last = { ok: false, error: data.error || "fail" };
+        last = { ok: false, error: data.error || "fail", closed: data.closed === true || res.status === 410 };
         if (res.status < 500 && res.status !== 429) return last;
       } catch {
         last = { ok: false, error: "net" };
@@ -1247,6 +1252,7 @@
   function openDropMail(id) {
     const drop = dropById(id);
     if (!drop) return;
+    if (dropRemain(drop.at) <= 0) { snack(t("dropMailClosed")); return; }
     showSheet(`
       <div class="drop-mail">
         <div class="sheet-head">
@@ -1269,13 +1275,14 @@
     const drop = dropById(id);
     const addr = String(email || "").trim();
     if (!drop || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) { snack(t("dropMailNeed")); return; }
+    if (dropRemain(drop.at) <= 0) { hideSheet(); snack(t("dropMailClosed")); return; }
     dropLs("tw.drop.email", addr);
     const armed = await armDropMail(drop, addr, false);
     if (armed.ok) writeDropPref(drop, "notify", true);
     hideSheet();
     syncDropChrome();
     armDropWatch();
-    snack(armed.ok ? t("dropMailOk") : t("dropMailFail"));
+    snack(armed.closed || armed.error === "Notify closed." ? t("dropMailClosed") : armed.ok ? t("dropMailOk") : t("dropMailFail"));
   }
   function pingDropLogin() {
     const drops = activeDrops();
