@@ -3677,81 +3677,35 @@
     try { document.cookie = "tw_pkce=; Path=/; Max-Age=0; SameSite=Lax; Secure"; } catch { /* private */ }
   }
 
-  function loadGsi() {
-    if (window.google?.accounts?.id) return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      const ok = () => window.google?.accounts?.id ? resolve() : reject(new Error("gsi"));
-      const found = document.querySelector("script[src*='accounts.google.com/gsi/client']");
-      if (found) {
-        found.addEventListener("load", ok, { once: true });
-        found.addEventListener("error", () => reject(new Error("gsi")), { once: true });
-        setTimeout(ok, 2500);
-        return;
-      }
-      const s = document.createElement("script");
-      s.src = "https://accounts.google.com/gsi/client";
-      s.async = true;
-      s.onload = ok;
-      s.onerror = () => reject(new Error("gsi"));
-      document.head.appendChild(s);
-    });
-  }
-
   async function applyGoogleIdToken(idToken, nonce) {
     const body = { provider: "google", id_token: idToken };
     if (nonce) body.nonce = nonce;
-    const data = await auth("token?grant_type=id_token", body);
+    let data;
+    try {
+      data = await auth("token?grant_type=id_token", body);
+    } catch (e) {
+      if (!nonce) throw e;
+      data = await auth("token?grant_type=id_token", { provider: "google", id_token: idToken });
+    }
     saveSession(data);
     try { sessionStorage.removeItem("tw.google.nonce"); } catch { /* private */ }
+    stripAuthUrl();
     await afterAuth(undefined, { pingDrop: true });
-    go("#/");
-  }
-
-  async function handleGoogleCredential(response) {
-    const idToken = response?.credential;
-    if (!idToken) {
-      state.authErr = t("errGoogle");
-      render();
-      return;
-    }
-    let nonce = "";
-    try { nonce = sessionStorage.getItem("tw.google.nonce") || ""; } catch { /* private */ }
-    try {
-      await applyGoogleIdToken(idToken, nonce);
-    } catch (e) {
-      try {
-        await applyGoogleIdToken(idToken, "");
-      } catch {
-        state.authErr = oauthFailCopy(e?.message || e?.data?.error_description || e?.data?.msg);
-        render();
-      }
-    }
   }
 
   async function startGoogle() {
     state.authErr = "";
-    try {
-      const rawNonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-      const hashedNonce = await sha256Hex(rawNonce);
-      try { sessionStorage.setItem("tw.google.nonce", rawNonce); } catch { /* private */ }
-      await loadGsi();
-      const g = window.google.accounts.id;
-      g.initialize({
-        client_id: GOOGLE_WEB,
-        callback: handleGoogleCredential,
-        nonce: hashedNonce,
-        context: "signin",
-        ux_mode: "popup",
-        use_fedcm_for_prompt: true,
-        itp_support: true,
-      });
-      g.prompt((n) => {
-        if (logged()) return;
-        if (n?.isNotDisplayed?.() || n?.isSkippedMoment?.()) startOAuth("google");
-      });
-    } catch {
-      startOAuth("google");
-    }
+    const rawNonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    const hashedNonce = await sha256Hex(rawNonce);
+    try { sessionStorage.setItem("tw.google.nonce", rawNonce); } catch { /* private */ }
+    const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    url.searchParams.set("client_id", GOOGLE_WEB);
+    url.searchParams.set("redirect_uri", `${location.origin}/`);
+    url.searchParams.set("response_type", "id_token");
+    url.searchParams.set("scope", "openid email profile");
+    url.searchParams.set("nonce", hashedNonce);
+    url.searchParams.set("prompt", "select_account");
+    location.href = url.href;
   }
 
   async function startOAuth(provider) {
@@ -3804,14 +3758,7 @@
       let nonce = "";
       try { nonce = sessionStorage.getItem("tw.google.nonce") || ""; } catch { /* private */ }
       try {
-        const body = { provider: "google", id_token: idToken };
-        if (nonce) body.nonce = nonce;
-        let data;
-        try { data = await auth("token?grant_type=id_token", body); }
-        catch { data = await auth("token?grant_type=id_token", { provider: "google", id_token: idToken }); }
-        saveSession(data);
-        stripAuthUrl();
-        await afterAuth(undefined, { pingDrop: true });
+        await applyGoogleIdToken(idToken, nonce);
         return "home";
       } catch (e) {
         stripAuthUrl();
