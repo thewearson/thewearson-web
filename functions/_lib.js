@@ -5,6 +5,8 @@ const VICE_STORES = [
   { label: "Cactus Jack", url: "https://shop.travisscott.com" },
 ];
 
+const CACHE_REQ = new Request("https://thewearson.com/__drop-notify-inbox");
+
 function corsHeaders(request) {
   const origin = String(request.headers.get("Origin") || "");
   const allow = /^https:\/\/(www\.)?thewearson\.com$/.test(origin)
@@ -20,18 +22,15 @@ function corsHeaders(request) {
   };
 }
 
-function corsJson(request, status, obj) {
+export function corsJson(request, status, obj) {
   return new Response(JSON.stringify(obj), {
     status,
     headers: { "content-type": "application/json; charset=utf-8", ...corsHeaders(request) },
   });
 }
 
-function json(status, obj) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8" },
-  });
+export function preflight(request) {
+  return new Response(null, { status: 204, headers: corsHeaders(request) });
 }
 
 function cleanEmail(raw) {
@@ -62,8 +61,55 @@ function b64utf8(s) {
 }
 
 function dropStub(env) {
-  if (!env.DROP_NOTIFY) return null;
+  if (!env || !env.DROP_NOTIFY) return null;
   return env.DROP_NOTIFY.get(env.DROP_NOTIFY.idFromName("inbox"));
+}
+
+async function loadPack(env) {
+  const stub = dropStub(env);
+  if (stub) {
+    const listed = await stub.fetch("https://drop.notify/list");
+    return listed.json().catch(() => ({ emails: [], sent: false }));
+  }
+  const hit = await caches.default.match(CACHE_REQ);
+  if (!hit) return { emails: [], sent: false };
+  return hit.json().catch(() => ({ emails: [], sent: false }));
+}
+
+async function savePack(env, pack) {
+  const stub = dropStub(env);
+  if (stub) {
+    if (pack.sent) {
+      await stub.fetch("https://drop.notify/sent", { method: "POST" });
+      return;
+    }
+    return;
+  }
+  await caches.default.put(CACHE_REQ, new Response(JSON.stringify(pack), {
+    headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=2592000" },
+  }));
+}
+
+async function upsertEmail(env, email, off) {
+  const stub = dropStub(env);
+  if (stub) {
+    const res = await stub.fetch("https://drop.notify/sub", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, off }),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
+  }
+  const pack = await loadPack(env);
+  const cur = new Set(Array.isArray(pack.emails) ? pack.emails : []);
+  if (off) cur.delete(email);
+  else {
+    if (cur.size >= 2000) return { ok: false, status: 429, data: { error: "List full." } };
+    cur.add(email);
+  }
+  await savePack(env, { emails: [...cur], sent: !!pack.sent });
+  return { ok: true, status: 200, data: { n: cur.size } };
 }
 
 async function smtpSend(env, { recipients, subject, text, html }) {
@@ -141,7 +187,8 @@ async function smtpSend(env, { recipients, subject, text, html }) {
 }
 
 function dropMailHtml(env) {
-  const page = "https://thewearson.com/#/n/" + (env.VICE_NEWS_ID || "");
+  const newsId = env.VICE_NEWS_ID || "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
+  const page = "https://thewearson.com/#/n/" + newsId;
   const stores = VICE_STORES.map((s) => `<p style="margin:0 0 10px"><a href="${s.url}" style="color:#111;font-weight:900;letter-spacing:1px;text-decoration:none;border-bottom:1.5px solid #111">${s.label}</a></p>`).join("");
   return `<!doctype html><html><body style="margin:0;background:#fff;color:#111;font-family:Arial,sans-serif">
   <div style="max-width:560px;margin:0 auto;padding:28px 20px;border:2px solid #111">
@@ -154,40 +201,28 @@ function dropMailHtml(env) {
   </body></html>`;
 }
 
-async function dropNotifyResponse(request, env) {
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
+export async function dropNotifyResponse(request, env) {
+  if (request.method === "OPTIONS") return preflight(request);
   if (request.method !== "POST") return corsJson(request, 405, { error: "POST only." });
   let body = {};
   try { body = await request.json(); } catch { return corsJson(request, 400, { error: "Bad JSON." }); }
   const email = cleanEmail(body.email);
-  const newsId = String(body.newsId || env.VICE_NEWS_ID || "").trim();
-  const off = body.off === true;
   if (!email) return corsJson(request, 400, { error: "Email required." });
-  if (!newsId) return corsJson(request, 400, { error: "Drop required." });
-  const stub = dropStub(env);
-  if (!stub) return corsJson(request, 503, { error: "Notify inbox missing." });
-  const res = await stub.fetch("https://drop.notify/sub", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, newsId, off, at: body.at || env.VICE_AT }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) return corsJson(request, res.status, data);
-  return corsJson(request, 200, { ok: true, on: !off });
+  const out = await upsertEmail(env, email, body.off === true);
+  if (!out.ok) return corsJson(request, out.status, out.data);
+  return corsJson(request, 200, { ok: true, on: body.off !== true });
 }
 
-async function sendDueDropMail(env, opt = {}) {
+export async function sendDueDropMail(env, opt = {}) {
   const at = Date.parse(env.VICE_AT || "2026-11-20T15:00:00Z");
   if (!Number.isFinite(at) || (Date.now() < at && !opt.force)) return { skipped: true };
-  const stub = dropStub(env);
-  if (!stub) return { error: "no inbox" };
-  const listed = await stub.fetch("https://drop.notify/list");
-  const pack = await listed.json().catch(() => ({}));
+  const pack = await loadPack(env);
   if (pack.sent && !opt.force) return { already: true };
   const emails = Array.isArray(pack.emails) ? pack.emails : [];
   if (!emails.length) return { sent: 0 };
+  const newsId = env.VICE_NEWS_ID || "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
   const subject = "🚨 DROP IS LIVE — THE WEARS ON";
-  const text = `DROP IS LIVE.\n\n${VICE_STORES.map((s) => `${s.label}: ${s.url}`).join("\n")}\n\nhttps://thewearson.com/#/n/${env.VICE_NEWS_ID || ""}`;
+  const text = `DROP IS LIVE.\n\n${VICE_STORES.map((s) => `${s.label}: ${s.url}`).join("\n")}\n\nhttps://thewearson.com/#/n/${newsId}`;
   const hook = await readSecret(env.DROP_MAIL_HOOK);
   if (hook) {
     const res = await fetch(hook, {
@@ -199,12 +234,14 @@ async function sendDueDropMail(env, opt = {}) {
   } else {
     await smtpSend(env, { recipients: emails, subject, text, html: dropMailHtml(env) });
   }
-  await stub.fetch("https://drop.notify/sent", { method: "POST" });
+  await savePack(env, { emails, sent: true });
+  const stub = dropStub(env);
+  if (stub) await stub.fetch("https://drop.notify/sent", { method: "POST" });
   return { sent: emails.length };
 }
 
-async function dropTickResponse(request, env) {
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
+export async function dropTickResponse(request, env) {
+  if (request.method === "OPTIONS") return preflight(request);
   if (request.method !== "POST") return corsJson(request, 405, { error: "POST only." });
   try {
     const out = await sendDueDropMail(env);
@@ -213,48 +250,3 @@ async function dropTickResponse(request, env) {
     return corsJson(request, 500, { error: String(err && err.message || err) });
   }
 }
-
-export class DropNotify {
-  constructor(state) {
-    this.state = state;
-  }
-  async fetch(request) {
-    const path = new URL(request.url).pathname;
-    if (request.method === "GET" || path.endsWith("/list")) {
-      const emails = (await this.state.storage.get("emails")) || [];
-      const sent = (await this.state.storage.get("sent")) || false;
-      return json(200, { emails, sent });
-    }
-    if (path.endsWith("/sent") && request.method === "POST") {
-      await this.state.storage.put("sent", true);
-      return json(200, { ok: true });
-    }
-    let body = {};
-    try { body = await request.json(); } catch { body = {}; }
-    const email = cleanEmail(body.email);
-    const off = body.off === true;
-    if (!email) return json(400, { error: "Email required." });
-    const cur = new Set((await this.state.storage.get("emails")) || []);
-    if (off) cur.delete(email);
-    else {
-      if (cur.size >= 2000) return json(429, { error: "List full." });
-      cur.add(email);
-    }
-    await this.state.storage.put("emails", [...cur]);
-    if (body.at) await this.state.storage.put("at", String(body.at));
-    return json(200, { ok: true, n: cur.size });
-  }
-}
-
-export default {
-  async fetch(request, env) {
-    const path = new URL(request.url).pathname.replace(/\/$/, "") || "/";
-    if (path === "/api/drop-notify") return dropNotifyResponse(request, env);
-    if (path === "/api/drop-tick") return dropTickResponse(request, env);
-    if (env.ASSETS) return env.ASSETS.fetch(request);
-    return new Response("Not found", { status: 404 });
-  },
-  async scheduled(event, env, ctx) {
-    ctx.waitUntil(sendDueDropMail(env).catch((err) => console.log("drop-mail", err && err.message)));
-  },
-};
