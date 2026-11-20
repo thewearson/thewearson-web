@@ -150,6 +150,11 @@
       dropNotify: "NOTIFY ME ON SITE",
       dropNotifying: "NOTIFYING",
       dropMail: "EMAIL REMINDER",
+      dropMailD: "GMAIL OPENS A DRAFT TO YOUR INBOX. HIT SEND. THE SITE CANNOT SEND THIS MAIL FOR YOU YET.",
+      dropMailGo: "OPEN GMAIL DRAFT",
+      dropMailApp: "OPEN MAIL APP",
+      dropMailNeed: "ENTER YOUR EMAIL.",
+      dropMailOk: "DRAFT OPENED. HIT SEND.",
       dropCal: "ADD TO CALENDAR",
       dropIcsOk: "CALENDAR ALARM READY.",
       dropNotifyOk: "WE’LL PING THIS TAB AT DROP. KEEP IT OPEN.",
@@ -270,6 +275,11 @@
       dropNotify: "SİTEDE HABER VER",
       dropNotifying: "HABER AÇIK",
       dropMail: "E-POSTA HATIRLATICI",
+      dropMailD: "GMAIL’DE KENDİ ADRESİNE TASLAK AÇILIR. GÖNDER’E BAS. SİTE BU MAİLİ ŞİMDİLİK SENİN YERİNE ATAMIYOR.",
+      dropMailGo: "GMAIL TASLAĞINI AÇ",
+      dropMailApp: "MAIL UYGULAMASI",
+      dropMailNeed: "E-POSTANI YAZ.",
+      dropMailOk: "TASLAK AÇILDI. GÖNDER’E BAS.",
       dropCal: "TAKVİME EKLE",
       dropIcsOk: "TAKVİM ALARMI HAZIR.",
       dropNotifyOk: "DROP ANINDA BU SEKMEDE PİNG. SEKMEYİ AÇIK TUT.",
@@ -917,7 +927,7 @@
       <div class="drop-buys">${drop.stores.map((s) => `<a class="drop-buy ${prefs.store === s.id ? "is-on" : ""}" href="${esc(s.url)}" target="_blank" rel="noopener" data-visit data-drop-pick="${esc(s.id)}">${esc(s.label)}</a>`).join("")}</div>
       <div class="drop-acts">
         <button class="drop-act ${prefs.notify ? "is-on" : ""}" type="button" data-drop-notify>${prefs.notify ? t("dropNotifying") : t("dropNotify")}</button>
-        <a class="drop-act" href="${esc(dropMailHref(drop))}">${t("dropMail")}</a>
+        <button class="drop-act" type="button" data-drop-mail>${t("dropMail")}</button>
         <a class="drop-act" href="${esc(dropGcalHref(drop))}" target="_blank" rel="noopener" data-drop-ics>${t("dropCal")}</a>
       </div>
     </section>`;
@@ -1086,9 +1096,78 @@
   function dropStoreLines(drop) {
     return (drop?.stores || []).map((s) => `${s.label}: ${s.url}`).join("\n");
   }
-  function dropMailHref(drop) {
-    const body = `Drop: 20 Nov 2026, 10:00 AM ET (18:00 TSİ)\n\n${dropStoreLines(drop)}\n\n${dropPageHref(drop)}`;
-    return `mailto:?subject=${encodeURIComponent(drop.title)}&body=${encodeURIComponent(body)}`;
+  function dropMailCopy(drop) {
+    const page = dropPageHref(drop);
+    const body = [
+      "THE WEARS ON — DROP REMINDER",
+      "",
+      "20 Nov 2026 · 10:00 AM ET · 18:00 TSİ",
+      "",
+      dropStoreLines(drop),
+      "",
+      page,
+    ].join("\n");
+    return { subject: drop.title, body, page };
+  }
+  function accountEmail() {
+    return String(state.me?.email || state.session?.user?.email || dropLs("tw.drop.email") || "").trim();
+  }
+  function dropMailHref(drop, email) {
+    const { subject, body } = dropMailCopy(drop);
+    const to = encodeURIComponent(String(email || "").trim());
+    return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+  function dropGmailHref(drop, email) {
+    const { subject, body } = dropMailCopy(drop);
+    const q = new URLSearchParams({
+      view: "cm",
+      fs: "1",
+      to: String(email || "").trim(),
+      su: subject,
+      body,
+    });
+    return `https://mail.google.com/mail/?${q.toString()}`;
+  }
+  function openOut(href, blank) {
+    if (!href) return;
+    const a = document.createElement("a");
+    a.href = href;
+    if (blank) { a.target = "_blank"; a.rel = "noopener"; }
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  function openDropMail(id) {
+    const drop = dropById(id);
+    if (!drop) return;
+    showSheet(`
+      <div class="drop-mail">
+        <div class="sheet-head">
+          <span></span>
+          <p>${t("dropMail")}</p>
+          <button type="button" data-close aria-label="${t("close")}">${I.close}</button>
+        </div>
+        <form class="drop-mail-body" data-drop-mail-form="${esc(drop.newsId)}">
+          <p class="drop-mail-d">${esc(t("dropMailD"))}</p>
+          <label class="drop-mail-lab">${t("email")}</label>
+          <input name="email" type="email" required value="${esc(accountEmail())}" placeholder="${esc(t("emailHint"))}" autocomplete="email">
+          <button class="drop-mail-go" type="submit">${t("dropMailGo")}</button>
+          <button class="drop-mail-app" type="button" data-drop-mail-app="${esc(drop.newsId)}">${t("dropMailApp")}</button>
+        </form>
+      </div>
+    `);
+    const input = document.querySelector("[data-drop-mail-form] input[name=email]");
+    if (input && !input.value) setTimeout(() => input.focus(), 40);
+  }
+  function sendDropMail(id, email, kind) {
+    const drop = dropById(id);
+    const addr = String(email || "").trim();
+    if (!drop || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) { snack(t("dropMailNeed")); return; }
+    dropLs("tw.drop.email", addr);
+    if (kind === "app") openOut(dropMailHref(drop, addr), false);
+    else openOut(dropGmailHref(drop, addr), true);
+    hideSheet();
+    snack(t("dropMailOk"));
   }
   function dropGcalHref(drop) {
     const start = icsStamp(new Date(drop.at));
@@ -3918,6 +3997,20 @@
       toggleDropNotify(dropNotify.closest("[data-drop]")?.dataset.drop);
       return;
     }
+    const dropMail = e.target.closest("[data-drop-mail]");
+    if (dropMail) {
+      e.preventDefault();
+      openDropMail(dropMail.closest("[data-drop]")?.dataset.drop);
+      return;
+    }
+    const dropMailApp = e.target.closest("[data-drop-mail-app]");
+    if (dropMailApp) {
+      e.preventDefault();
+      const form = dropMailApp.closest("form");
+      const email = form?.querySelector("input[name=email]")?.value || accountEmail();
+      sendDropMail(dropMailApp.dataset.dropMailApp, email, "app");
+      return;
+    }
     const dropIcs = e.target.closest("[data-drop-ics]");
     if (dropIcs) {
       downloadDropIcs(dropIcs.closest("[data-drop]")?.dataset.drop);
@@ -4071,6 +4164,12 @@
   });
 
   document.addEventListener("submit", (e) => {
+    const mailForm = e.target.closest("[data-drop-mail-form]");
+    if (mailForm) {
+      e.preventDefault();
+      sendDropMail(mailForm.dataset.dropMailForm, mailForm.querySelector("input[name=email]")?.value, "gmail");
+      return;
+    }
     const form = e.target.closest("[data-comment-form]");
     if (form) {
       e.preventDefault();
