@@ -149,9 +149,10 @@
       dropDefault: "DEFAULT STORE",
       dropNotify: "NOTIFY ME ON SITE",
       dropNotifying: "NOTIFYING",
-      dropIcs: "EMAIL / CALENDAR REMINDER",
-      dropIcsOk: "CALENDAR ALARM DOWNLOADED.",
-      dropNotifyOk: "WE’LL PING THIS TAB AT DROP.",
+      dropMail: "EMAIL REMINDER",
+      dropCal: "ADD TO CALENDAR",
+      dropIcsOk: "CALENDAR ALARM READY.",
+      dropNotifyOk: "WE’LL PING THIS TAB AT DROP. KEEP IT OPEN.",
       dropNotifyDenied: "SITE TOAST STAYS ON. BROWSER ALERTS ARE BLOCKED.",
       dropShop: "SHOP NOW",
       legalFooter: "© 2027 RACKSGRID",
@@ -268,9 +269,10 @@
       dropDefault: "VARSAYILAN MAĞAZA",
       dropNotify: "SİTEDE HABER VER",
       dropNotifying: "HABER AÇIK",
-      dropIcs: "E-POSTA / TAKVİM HATIRLATICI",
-      dropIcsOk: "TAKVİM ALARMI İNDİRİLDİ.",
-      dropNotifyOk: "DROP ANINDA BU SEKMEDE PİNG.",
+      dropMail: "E-POSTA HATIRLATICI",
+      dropCal: "TAKVİME EKLE",
+      dropIcsOk: "TAKVİM ALARMI HAZIR.",
+      dropNotifyOk: "DROP ANINDA BU SEKMEDE PİNG. SEKMEYİ AÇIK TUT.",
       dropNotifyDenied: "SİTE BİLDİRİMİ AÇIK. TARAYICI İZNİ KAPALI.",
       dropShop: "ŞİMDİ AL",
       legalFooter: "© 2027 RACKSGRID",
@@ -695,8 +697,9 @@
   const VICE_NEWS_ID = "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
   const VICE_AT = "2026-11-20T15:00:00Z";
   const VICE_STORES = [
-    { id: "nike", label: "Nike SNKRS", url: "https://www.nike.com/launch" },
     { id: "nba", label: "NBA Store", url: "https://store.nba.com" },
+    { id: "fanatics", label: "Fanatics", url: "https://www.fanatics.com/nba/o-1370+z-938737729-293541727" },
+    { id: "nike", label: "Nike SNKRS", url: "https://www.nike.com/launch" },
     { id: "cactus", label: "Cactus Jack", url: "https://shop.travisscott.com" },
   ];
   let dropTimer = 0;
@@ -754,13 +757,43 @@
   function normalizeDropStores(list, fallback) {
     const src = Array.isArray(list) && list.length ? list : fallback;
     const out = [];
-    for (const s of src.slice(0, 3)) {
+    for (const s of src.slice(0, 6)) {
       const url = hrefAbs(s?.url || s?.href || "");
       const label = String(s?.label || s?.name || s?.store || "").trim();
       if (!url || !label) continue;
       out.push({ id: String(s.id || dropStoreId(label, url)), label, url });
     }
-    return out.length ? out : fallback.slice();
+    return out.length ? out : (fallback || []).slice();
+  }
+  function viceStores(list) {
+    const overlay = {};
+    for (const s of list || []) {
+      const url = hrefAbs(s?.url || s?.href || "");
+      const label = String(s?.label || s?.name || s?.store || "").trim();
+      const id = String(s?.id || dropStoreId(label, url));
+      if (!id) continue;
+      overlay[id] = { id, label: label || overlay[id]?.label || "", url: url || overlay[id]?.url || "" };
+    }
+    const out = [];
+    const seen = new Set();
+    for (const base of VICE_STORES) {
+      const hit = overlay[base.id] || {};
+      out.push({
+        id: base.id,
+        label: hit.label || base.label,
+        url: hit.url || base.url,
+      });
+      seen.add(base.id);
+    }
+    for (const s of list || []) {
+      const url = hrefAbs(s?.url || s?.href || "");
+      const label = String(s?.label || s?.name || s?.store || "").trim();
+      const id = String(s?.id || dropStoreId(label, url));
+      if (!id || seen.has(id) || !url || !label) continue;
+      out.push({ id, label, url });
+      seen.add(id);
+    }
+    return out;
   }
   function resolveDrop(row, packed) {
     const json = parseDropJson(row.drop_json || row.dropJson);
@@ -772,8 +805,8 @@
     if (!on) return null;
     const at = String(json?.at || pack.at || (vice ? VICE_AT : "")).trim();
     if (!at || Number.isNaN(Date.parse(at))) return null;
-    const fallback = vice ? VICE_STORES : [];
-    const stores = normalizeDropStores(json?.stores || pack.stores, fallback);
+    const packedStores = json?.stores || pack.stores;
+    const stores = vice ? viceStores(packedStores) : normalizeDropStores(packedStores, []);
     if (!stores.length) return null;
     const buy = hrefAbs(row.buy_url || row.buyUrl);
     if (buy) {
@@ -786,7 +819,7 @@
       at,
       title: String(json?.title || row.title || "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI"),
       stores,
-      defaultId: String(json?.defaultId || stores[0].id),
+      defaultId: vice ? "nba" : String(json?.defaultId || stores[0].id),
       vice,
     };
   }
@@ -803,7 +836,7 @@
     const vice = !!(drop && (drop.vice || id === VICE_NEWS_ID));
     const notify = dropLs(`tw.drop.notify.${id}`) === "true" || (vice && dropLs("vice_city_notify") === "true");
     const auto = dropLs(`tw.drop.auto.${id}`) === "true";
-    const store = dropLs(`tw.drop.store.${id}`) || drop?.defaultId || "nike";
+    const store = dropLs(`tw.drop.store.${id}`) || drop?.defaultId || drop?.stores?.[0]?.id || "nba";
     return { notify, auto, store };
   }
   function writeDropPref(drop, kind, on) {
@@ -884,7 +917,8 @@
       <div class="drop-buys">${drop.stores.map((s) => `<a class="drop-buy ${prefs.store === s.id ? "is-on" : ""}" href="${esc(s.url)}" target="_blank" rel="noopener" data-visit data-drop-pick="${esc(s.id)}">${esc(s.label)}</a>`).join("")}</div>
       <div class="drop-acts">
         <button class="drop-act ${prefs.notify ? "is-on" : ""}" type="button" data-drop-notify>${prefs.notify ? t("dropNotifying") : t("dropNotify")}</button>
-        <button class="drop-act" type="button" data-drop-ics>${t("dropIcs")}</button>
+        <a class="drop-act" href="${esc(dropMailHref(drop))}">${t("dropMail")}</a>
+        <a class="drop-act" href="${esc(dropGcalHref(drop))}" target="_blank" rel="noopener" data-drop-ics>${t("dropCal")}</a>
       </div>
     </section>`;
   }
@@ -942,19 +976,17 @@
   function fireDrop(drop, opt = {}) {
     if (!drop) return;
     const prefs = dropPrefs(drop);
-    const late = !!opt.late;
-    const redirect = !late && !opt.noRedirect && prefs.auto;
     if (dropWasFired(drop) && !opt.force) return;
     markDropFired(drop);
-    dropPush(drop);
-    if (redirect) {
+    if (prefs.notify) dropPush(drop);
+    if (prefs.auto && !opt.noRedirect) {
       const store = pickDropStore(drop, prefs.store);
-      if (store) {
-        location.href = store.url;
+      if (store?.url) {
+        location.assign(store.url);
         return;
       }
     }
-    if (prefs.notify || opt.toast || late) dropToast(drop);
+    if (prefs.notify || opt.toast) dropToast(drop);
     paintDropClock();
   }
   function scheduleDrop(drop) {
@@ -962,7 +994,7 @@
     if (ms <= 0) {
       const prefs = dropPrefs(drop);
       if (!dropWasFired(drop) && (prefs.notify || prefs.auto || hash().path === "n")) {
-        fireDrop(drop, { late: true, toast: hash().path === "n" });
+        fireDrop(drop, { toast: prefs.notify || hash().path === "n" });
       }
       paintDropClock();
       return;
@@ -984,16 +1016,20 @@
     scheduleDrop(next);
     if (!dropWatchBound) {
       dropWatchBound = true;
-      document.addEventListener("visibilitychange", () => {
+      const catchUp = () => {
         if (document.hidden) return;
         activeDrops().forEach((d) => {
-          if (dropRemain(d.at) <= 0 && !dropWasFired(d)) {
-            const prefs = dropPrefs(d);
-            if (prefs.notify || prefs.auto || hash().path === "n") fireDrop(d, { late: true, toast: hash().path === "n" });
+          if (dropRemain(d.at) > 0 || dropWasFired(d)) return;
+          const prefs = dropPrefs(d);
+          if (prefs.notify || prefs.auto || hash().path === "n") {
+            fireDrop(d, { toast: prefs.notify || hash().path === "n" });
           }
         });
         paintDropClock();
-      });
+      };
+      document.addEventListener("visibilitychange", catchUp);
+      window.addEventListener("focus", catchUp);
+      window.addEventListener("pageshow", catchUp);
     }
   }
   function syncDropChrome(root) {
@@ -1044,13 +1080,35 @@
     setDropStorePref(drop, storeId);
     syncDropChrome();
   }
+  function dropPageHref(drop) {
+    return `${location.origin}/#/n/${encodeURIComponent(drop.newsId)}`;
+  }
+  function dropStoreLines(drop) {
+    return (drop?.stores || []).map((s) => `${s.label}: ${s.url}`).join("\n");
+  }
+  function dropMailHref(drop) {
+    const body = `Drop: 20 Nov 2026, 10:00 AM ET (18:00 TSİ)\n\n${dropStoreLines(drop)}\n\n${dropPageHref(drop)}`;
+    return `mailto:?subject=${encodeURIComponent(drop.title)}&body=${encodeURIComponent(body)}`;
+  }
+  function dropGcalHref(drop) {
+    const start = icsStamp(new Date(drop.at));
+    const end = icsStamp(new Date(new Date(drop.at).getTime() + 60 * 60 * 1000));
+    const details = `10:00 AM ET / 18:00 TSI\n${dropStoreLines(drop)}\n${dropPageHref(drop)}`;
+    const q = new URLSearchParams({
+      action: "TEMPLATE",
+      text: drop.title,
+      dates: `${start}/${end}`,
+      details,
+      location: dropPageHref(drop),
+    });
+    return `https://calendar.google.com/calendar/render?${q.toString()}`;
+  }
   function downloadDropIcs(id) {
     const drop = dropById(id);
     if (!drop) return;
     const start = new Date(drop.at);
     const end = new Date(start.getTime() + 60 * 60 * 1000);
-    const page = `${location.origin}/#/n/${encodeURIComponent(drop.newsId)}`;
-    const stores = drop.stores.map((s) => `${s.label}: ${s.url}`).join("\n");
+    const page = dropPageHref(drop);
     const ics = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
@@ -1063,10 +1121,10 @@
       `DTSTART:${icsStamp(start)}`,
       `DTEND:${icsStamp(end)}`,
       `SUMMARY:${icsEsc(drop.title)}`,
-      `DESCRIPTION:${icsEsc(`10:00 AM ET / 18:00 TSI\n${stores}\n${page}`)}`,
+      `DESCRIPTION:${icsEsc(`10:00 AM ET / 18:00 TSI\n${dropStoreLines(drop)}\n${page}`)}`,
       `URL:${page}`,
       "BEGIN:VALARM",
-      "TRIGGER:PT0S",
+      "TRIGGER:-PT10M",
       "ACTION:DISPLAY",
       "DESCRIPTION:DROP IS LIVE",
       "END:VALARM",
@@ -1082,8 +1140,6 @@
     a.click();
     a.remove();
     window.setTimeout(() => URL.revokeObjectURL(href), 1500);
-    const mail = `mailto:?subject=${encodeURIComponent(drop.title)}&body=${encodeURIComponent(`Drop: 20 Nov 2026, 10:00 AM ET (18:00 TSİ)\n\n${stores}\n\n${page}`)}`;
-    window.open(mail, "_blank");
     snack(t("dropIcsOk"));
   }
   function pingDropLogin() {
@@ -1095,7 +1151,7 @@
     dropPingQueued = false;
     drops.forEach((drop) => {
       writeDropPref(drop, "notify", true);
-      if (dropRemain(drop.at) <= 0) fireDrop(drop, { late: true, toast: true, force: !dropWasFired(drop) });
+      if (dropRemain(drop.at) <= 0) fireDrop(drop, { toast: true, noRedirect: true, force: !dropWasFired(drop) });
     });
     armDropWatch();
   }
@@ -3864,8 +3920,9 @@
     }
     const dropIcs = e.target.closest("[data-drop-ics]");
     if (dropIcs) {
-      e.preventDefault();
       downloadDropIcs(dropIcs.closest("[data-drop]")?.dataset.drop);
+      if (dropIcs.tagName === "A" && dropIcs.getAttribute("href")) return;
+      e.preventDefault();
       return;
     }
     const dropPick = e.target.closest("[data-drop-pick]");

@@ -3321,6 +3321,9 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
   border-top: var(--stroke) solid var(--ink);
 }
 .drop-act {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 52px;
   padding: 0 12px;
   font-family: var(--display);
@@ -3328,7 +3331,13 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-o
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  text-align: center;
   border-right: var(--stroke) solid var(--ink);
+}
+.drop-acts .drop-act:first-child {
+  grid-column: 1 / -1;
+  border-right: 0;
+  border-bottom: var(--stroke) solid var(--ink);
 }
 .drop-act:last-child { border-right: 0; }
 .drop-act.is-on,
