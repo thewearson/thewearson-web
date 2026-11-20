@@ -145,23 +145,23 @@
       dropWhen: "NOV. 20 — 10:00 AM ET",
       dropTsi: "18:00 TSİ",
       dropDays: "DAYS", dropHrs: "HRS", dropMin: "MIN", dropSec: "SEC",
-      dropLive: "DROP IS LIVE",
-      dropLiveShop: "🚨 DROP IS LIVE! SHOP NOW",
+      dropLive: "DROP LOCK OPENED",
+      dropLiveShop: "DROP LOCK OPENED",
       dropAuto: "AUTO-REDIRECT AT DROP",
       dropAutoD: "AT 10:00 AM ET THE SELECTED STORE OPENS.",
       dropDefault: "DEFAULT STORE",
       dropNotify: "NOTIFY ME",
       dropNotifying: "NOTIFYING",
       dropMail: "EMAIL FOR NOTIFY",
-      dropMailD: "AT 18:00 TSİ THE WEARS ON MAILS YOU FROM THEWEARS.ON@GMAIL.COM. TAB CLOSED — YOU STILL GET THE MAIL.",
+      dropMailD: "WHEN THE LOCK OPENS, THE WEARS ON MAILS THE MEMBER CARD FROM THEWEARS.ON@GMAIL.COM. TAB CLOSED — YOU STILL GET IT.",
       dropMailGo: "ARM EMAIL",
       dropMailApp: "OPEN MAIL APP",
       dropMailNeed: "ENTER YOUR EMAIL.",
-      dropMailOk: "ARMED. WE MAIL YOU AT DROP FROM THE WEARS ON.",
+      dropMailOk: "ARMED. THE WEARS ON MAILS YOU WHEN THE LOCK OPENS.",
       dropMailFail: "COULD NOT ARM EMAIL. TRY AGAIN.",
       dropCal: "ADD TO CALENDAR",
       dropIcsOk: "CALENDAR ALARM READY.",
-      dropNotifyOk: "WE MAIL YOU AT 18:00 TSİ FROM THEWEARS.ON@GMAIL.COM. THIS TAB ALSO PINGS IF IT STAYS OPEN.",
+      dropNotifyOk: "ARMED. WHEN THE LOCK OPENS, THE WEARS ON MAILS YOU FROM THEWEARS.ON@GMAIL.COM.",
       dropNotifyDenied: "MAIL STILL GOES OUT. BROWSER ALERTS ARE BLOCKED.",
       dropShop: "SHOP NOW",
       legalFooter: "© 2027 RACKSGRID",
@@ -271,23 +271,23 @@
       dropWhen: "20 KAS — 10:00 AM ET",
       dropTsi: "18:00 TSİ",
       dropDays: "GÜN", dropHrs: "SAAT", dropMin: "DK", dropSec: "SN",
-      dropLive: "DROP YAYINDA",
-      dropLiveShop: "🚨 DROP YAYINDA! ŞİMDİ AL",
+      dropLive: "DROP LOCK OPENED",
+      dropLiveShop: "DROP LOCK OPENED",
       dropAuto: "DROP ANINDA OTOMATİK YÖNLENDİR",
       dropAutoD: "10:00 AM ET’DE SEÇİLİ MAĞAZA AÇILIR.",
       dropDefault: "VARSAYILAN MAĞAZA",
       dropNotify: "HABER VER",
       dropNotifying: "HABER AÇIK",
       dropMail: "E-POSTA ADRESİ",
-      dropMailD: "18:00 TSİ’DE THE WEARS ON, THEWEARS.ON@GMAIL.COM’DAN MAIL ATAR. SEKME KAPALI OLSA DA GELİR.",
+      dropMailD: "KİLİT AÇILINCA THE WEARS ON, ÜYE KARTINI THEWEARS.ON@GMAIL.COM’DAN ATAR. SEKME KAPALI OLSA DA GELİR.",
       dropMailGo: "E-POSTAYI KAYDET",
       dropMailApp: "MAIL UYGULAMASI",
       dropMailNeed: "E-POSTANI YAZ.",
-      dropMailOk: "TAMAM. DROP ANINDA THE WEARS ON MAIL ATAR.",
+      dropMailOk: "TAMAM. KİLİT AÇILINCA THE WEARS ON MAIL ATAR.",
       dropMailFail: "E-POSTA KAYDEDİLEMEDİ. TEKRAR DENE.",
       dropCal: "TAKVİME EKLE",
       dropIcsOk: "TAKVİM ALARMI HAZIR.",
-      dropNotifyOk: "18:00 TSİ’DE THEWEARS.ON@GMAIL.COM’DAN MAIL GİDER. SEKME AÇIKSA BURADA DA PİNG VAR.",
+      dropNotifyOk: "TAMAM. KİLİT AÇILINCA THEWEARS.ON@GMAIL.COM’DAN ÜYE KARTI GELİR.",
       dropNotifyDenied: "MAIL YİNE GİDER. TARAYICI İZNİ KAPALI.",
       dropShop: "ŞİMDİ AL",
       legalFooter: "© 2027 RACKSGRID",
@@ -988,12 +988,27 @@
       </div>`;
     document.body.appendChild(el);
   }
-  function pingDropMailFire() {
-    fetch(DROP_TICK_API, { method: "POST", keepalive: true }).catch(() => {});
+  let dropMailDrain = 0;
+  function pingDropMailFire(extra) {
+    fetch(DROP_TICK_API, {
+      method: "POST",
+      keepalive: true,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(extra || {}),
+    }).catch(() => {});
+  }
+  function drainDropMail() {
+    if (dropMailDrain) return;
+    pingDropMailFire({ live: true });
+    dropMailDrain = window.setInterval(() => pingDropMailFire({ live: true }), 8000);
+    window.setTimeout(() => {
+      window.clearInterval(dropMailDrain);
+      dropMailDrain = 0;
+    }, 8000 * 24);
   }
   function fireDrop(drop, opt = {}) {
     if (!drop) return;
-    pingDropMailFire();
+    drainDropMail();
     const prefs = dropPrefs(drop);
     if (dropWasFired(drop) && !opt.force) return;
     markDropFired(drop);

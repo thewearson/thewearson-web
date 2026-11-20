@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "include": ["/api/drop-notify", "/api/drop-tick"],
+  "exclude": []
+}
