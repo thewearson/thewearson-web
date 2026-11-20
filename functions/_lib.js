@@ -787,10 +787,12 @@ export async function dropStudioResponse(request, env) {
   if (request.method === "GET") {
     const newsId = packId(url.searchParams.get("newsId") || env.VICE_NEWS_ID, env);
     const pack = await loadPack(env, newsId);
+    const emails = [...new Set((pack.emails || []).map((e) => String(e || "").trim().toLowerCase()).filter(Boolean))].sort();
     return corsJson(request, 200, {
       ok: true,
       newsId,
-      n: (pack.emails || []).length,
+      n: emails.length,
+      emails,
       sentStoreIds: pack.sentStoreIds || [],
       lockDone: !!pack.lockDone,
       wave: pack.wave ? {
