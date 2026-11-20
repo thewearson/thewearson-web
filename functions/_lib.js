@@ -176,6 +176,28 @@ async function savePack(env, pack, newsId) {
   if (id === VICE_NEWS_ID) await caches.default.put(CACHE_REQ, body);
 }
 
+async function rpcDropPut(env, pack, email, off) {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/rpc/wears_drop_notify_put`, {
+      method: "POST",
+      headers: {
+        apikey: SB_KEY,
+        Authorization: `Bearer ${SB_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ p_pack: pack, p_email: email, p_off: !!off }),
+    });
+    const data = await r.json().catch(() => ({}));
+    return { ok: r.ok, data };
+  } catch {
+    return { ok: false, data: {} };
+  }
+}
+
+function mergeEmails(...lists) {
+  return [...new Set(lists.flat().map((e) => cleanEmail(e)).filter(Boolean))].sort();
+}
+
 async function upsertEmail(env, email, off, newsId) {
   const id = packId(newsId, env);
   await rememberNews(env, id);
@@ -197,7 +219,9 @@ async function upsertEmail(env, email, off, newsId) {
     cur.add(email);
   }
   await savePack(env, { ...pack, emails: [...cur] }, id);
-  return { ok: true, status: 200, data: { n: cur.size } };
+  const remote = await rpcDropPut(env, id, email, off);
+  const n = Number(remote.data && remote.data.n) || cur.size;
+  return { ok: true, status: 200, data: { n } };
 }
 
 async function smtpSend(env, { recipients, subject, text, html, selfOnly, toEmail }) {
@@ -692,7 +716,7 @@ async function sendOneDropMail(env, newsId, opt = {}) {
   const requested = cleanNewsId(newsId, env);
   const id = packId(requested, env);
   const pack = await loadPack(env, id);
-  const emails = Array.isArray(pack.emails) ? pack.emails : [];
+  const emails = mergeEmails(pack.emails, opt.emails);
   const sentStoreIds = [...new Set((pack.sentStoreIds || []).map(String))];
   let wave = pack.wave && typeof pack.wave === "object" ? pack.wave : null;
   const studioIds = (opt.studio && Array.isArray(opt.storeIds) ? opt.storeIds : [])
@@ -813,7 +837,8 @@ export async function dropStudioResponse(request, env) {
     : [];
   if (!storeIds.length) return corsJson(request, 400, { error: "storeIds required." });
   try {
-    const out = await sendDueDropMail(env, { studio: true, storeIds, again: body.again === true, newsId });
+    const extra = Array.isArray(body.emails) ? body.emails : [];
+    const out = await sendDueDropMail(env, { studio: true, storeIds, again: body.again === true, newsId, emails: extra });
     const status = out.error ? 400 : 200;
     return corsJson(request, status, { ok: !out.error, ...out });
   } catch (err) {
