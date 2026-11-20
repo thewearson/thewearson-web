@@ -711,10 +711,16 @@
 
   const VICE_NEWS_ID = "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
   const VICE_AT = "2026-11-20T15:00:00Z";
+  const AF1_NEWS_ID = "75460ba6-0d53-402b-ad25-7a5a5a36dc7e";
+  const AF1_AT = "2026-11-21T15:00:00Z";
   const VICE_STORES = [
     { id: "nba", label: "NBA Store", url: "https://store.nba.com" },
     { id: "fanatics", label: "Fanatics", url: "https://www.fanatics.com/nba/o-1370+z-938737729-293541727" },
     { id: "nike", label: "Nike SNKRS", url: "https://www.nike.com/launch" },
+    { id: "cactus", label: "Cactus Jack", url: "https://shop.travisscott.com" },
+  ];
+  const AF1_STORES = [
+    { id: "snkrs", label: "Nike SNKRS", url: "https://www.nike.com/launch" },
     { id: "cactus", label: "Cactus Jack", url: "https://shop.travisscott.com" },
   ];
   let dropTimer = 0;
@@ -739,6 +745,9 @@
     if (String(row?.id || "") === VICE_NEWS_ID) return true;
     const s = `${row?.title || ""} ${row?.dek || ""} ${row?.body || ""} ${row?.product_name || row?.productName || ""}`.toUpperCase();
     return s.includes("MIAMI HEAT") && s.includes("CACTUS JACK");
+  }
+  function looksAf1(row) {
+    return String(row?.id || "") === AF1_NEWS_ID;
   }
   function parseDropJson(raw) {
     if (!raw) return null;
@@ -810,21 +819,38 @@
     }
     return out;
   }
+  function af1Stores(list) {
+    const overlay = {};
+    const byUrl = {};
+    for (const s of list || []) {
+      const url = hrefAbs(s?.url || s?.href || "");
+      const label = String(s?.label || s?.name || s?.store || "").trim();
+      const id = String(s?.id || dropStoreId(label, url));
+      if (!id) continue;
+      overlay[id] = { id, label: label || overlay[id]?.label || "", url: url || overlay[id]?.url || "" };
+      if (url) byUrl[url.replace(/\/+$/, "")] = overlay[id];
+    }
+    return AF1_STORES.map((base) => {
+      const hit = overlay[base.id] || (base.id === "snkrs" ? overlay.nike : null) || byUrl[base.url.replace(/\/+$/, "")] || {};
+      return { id: base.id, label: hit.label || base.label, url: hit.url || base.url };
+    });
+  }
   function resolveDrop(row, packed) {
     const json = parseDropJson(row.drop_json || row.dropJson);
     const pack = packed || parseDropNote(row.buy_note || row.buyNote);
     if (json && json.on === false) return null;
     if (pack.off) return null;
     const vice = looksViceCity(row);
-    const on = json?.on === true || pack.stores.length >= 2 || vice;
+    const af1 = looksAf1(row);
+    const on = json?.on === true || pack.stores.length >= 2 || vice || af1;
     if (!on) return null;
-    const at = String(json?.at || pack.at || (vice ? VICE_AT : "")).trim();
+    const at = String(json?.at || pack.at || (af1 ? AF1_AT : vice ? VICE_AT : "")).trim();
     if (!at || Number.isNaN(Date.parse(at))) return null;
     const packedStores = json?.stores || pack.stores;
-    const stores = vice ? viceStores(packedStores) : normalizeDropStores(packedStores, []);
+    const stores = vice ? viceStores(packedStores) : af1 ? af1Stores(packedStores) : normalizeDropStores(packedStores, []);
     if (!stores.length) return null;
     const buy = hrefAbs(row.buy_url || row.buyUrl);
-    if (buy) {
+    if (buy && !af1) {
       const id = dropStoreId("", buy);
       const hit = stores.find((s) => s.id === id) || stores.find((s) => hrefAbs(s.url).replace(/\/+$/, "") === buy.replace(/\/+$/, ""));
       if (hit) hit.url = buy;
@@ -832,9 +858,9 @@
     return {
       newsId: String(row.id || ""),
       at,
-      title: String(json?.title || row.title || "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI"),
+      title: String(json?.title || row.title || (af1 ? "GTA 6 × TRAVIS SCOTT - ONLY 600 PAIRS OF THE MULTICOLOR AF1" : "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI")),
       stores,
-      defaultId: vice ? "nba" : String(json?.defaultId || stores[0].id),
+      defaultId: vice ? "nba" : af1 ? "snkrs" : String(json?.defaultId || stores[0].id),
       vice,
     };
   }
@@ -884,6 +910,31 @@
   function dropPad(n) {
     return String(Math.max(0, n)).padStart(2, "0");
   }
+  function dropWhenLine(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return `${t("dropWhen")} · ${t("dropTsi")}`;
+    const etParts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).formatToParts(d);
+    const get = (type) => etParts.find((p) => p.type === type)?.value || "";
+    const monthEn = get("month").toUpperCase();
+    const day = get("day");
+    const clock = `${get("hour")}:${get("minute")} ${get("dayPeriod").toUpperCase()} ET`;
+    const trMonth = { JAN: "OCA", FEB: "ŞUB", MAR: "MAR", APR: "NIS", MAY: "MAY", JUN: "HAZ", JUL: "TEM", AUG: "AĞU", SEP: "EYL", OCT: "EKI", NOV: "KAS", DEC: "ARA" }[monthEn] || monthEn;
+    const when = state.lang === "tr" ? `${day} ${trMonth} — ${clock}` : `${monthEn}. ${day} — ${clock}`;
+    const tsi = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Istanbul",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(d);
+    return `${when} · ${tsi} TSİ`;
+  }
   function activeDrops() {
     return (state.news || []).map((n) => n.drop).filter(Boolean);
   }
@@ -912,7 +963,7 @@
       <header class="drop-head">
         <p class="kicker">${t("dropKicker")}</p>
         <h2>${esc(drop.title)}</h2>
-        <p class="drop-when">${t("dropWhen")} · ${t("dropTsi")}</p>
+        <p class="drop-when">${esc(dropWhenLine(drop.at))}</p>
       </header>
       <p class="drop-live">${esc(t("dropLiveShop"))}</p>
       <div class="drop-clock ${parts.days > 0 ? "is-days" : ""}" aria-live="polite">
@@ -994,13 +1045,13 @@
       method: "POST",
       keepalive: true,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(extra || {}),
+      body: JSON.stringify({ live: true, ...(extra || {}) }),
     }).catch(() => {});
   }
   function drainDropMail() {
     if (dropMailDrain) return;
-    pingDropMailFire({ live: true });
-    dropMailDrain = window.setInterval(() => pingDropMailFire({ live: true }), 8000);
+    pingDropMailFire();
+    dropMailDrain = window.setInterval(() => pingDropMailFire(), 8000);
     window.setTimeout(() => {
       window.clearInterval(dropMailDrain);
       dropMailDrain = 0;
@@ -1008,6 +1059,7 @@
   }
   function fireDrop(drop, opt = {}) {
     if (!drop) return;
+    pingDropMailFire({ newsId: drop.newsId });
     drainDropMail();
     const prefs = dropPrefs(drop);
     if (dropWasFired(drop) && !opt.force) return;
@@ -1023,21 +1075,33 @@
     if (prefs.notify || opt.toast) dropToast(drop);
     paintDropClock();
   }
+  function nextPendingDrop(exceptId) {
+    return activeDrops()
+      .filter((d) => d.newsId !== exceptId && dropRemain(d.at) > 0)
+      .sort((a, b) => dropRemain(a.at) - dropRemain(b.at))[0] || null;
+  }
   function scheduleDrop(drop) {
+    if (!drop) return;
     const ms = dropRemain(drop.at);
     if (ms <= 0) {
-      pingDropMailFire();
+      pingDropMailFire({ newsId: drop.newsId });
       const prefs = dropPrefs(drop);
       if (!dropWasFired(drop) && (prefs.notify || prefs.auto || hash().path === "n")) {
         fireDrop(drop, { toast: prefs.notify || hash().path === "n" });
       }
       paintDropClock();
+      const next = nextPendingDrop(drop.newsId);
+      if (next) scheduleDrop(next);
       return;
     }
     const wait = Math.min(ms, 1000 * 60 * 30);
     dropTimer = window.setTimeout(() => {
-      if (dropRemain(drop.at) <= 0) fireDrop(drop);
-      else scheduleDrop(drop);
+      if (dropRemain(drop.at) <= 0) {
+        fireDrop(drop);
+        scheduleDrop(nextPendingDrop(drop.newsId));
+        return;
+      }
+      scheduleDrop(drop);
     }, wait);
   }
   function armDropWatch() {
@@ -1139,7 +1203,7 @@
     const body = [
       "THE WEARS ON — DROP REMINDER",
       "",
-      "20 Nov 2026 · 10:00 AM ET · 18:00 TSİ",
+      dropWhenLine(drop.at),
       "",
       dropStoreLines(drop),
       "",
@@ -1208,7 +1272,7 @@
   function dropGcalHref(drop) {
     const start = icsStamp(new Date(drop.at));
     const end = icsStamp(new Date(new Date(drop.at).getTime() + 60 * 60 * 1000));
-    const details = `10:00 AM ET / 18:00 TSI\n${dropStoreLines(drop)}\n${dropPageHref(drop)}`;
+    const details = `${dropWhenLine(drop.at)}\n${dropStoreLines(drop)}\n${dropPageHref(drop)}`;
     const q = new URLSearchParams({
       action: "TEMPLATE",
       text: drop.title,
@@ -1236,7 +1300,7 @@
       `DTSTART:${icsStamp(start)}`,
       `DTEND:${icsStamp(end)}`,
       `SUMMARY:${icsEsc(drop.title)}`,
-      `DESCRIPTION:${icsEsc(`10:00 AM ET / 18:00 TSI\n${dropStoreLines(drop)}\n${page}`)}`,
+      `DESCRIPTION:${icsEsc(`${dropWhenLine(drop.at)}\n${dropStoreLines(drop)}\n${page}`)}`,
       `URL:${page}`,
       "BEGIN:VALARM",
       "TRIGGER:-PT10M",

@@ -1,11 +1,29 @@
+const VICE_NEWS_ID = "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
+const AF1_NEWS_ID = "75460ba6-0d53-402b-ad25-7a5a5a36dc7e";
+const AF1_AT = "2026-11-21T15:00:00Z";
 const VICE_STORES = [
   { id: "nba", label: "NBA Store", url: "https://store.nba.com" },
   { id: "fanatics", label: "Fanatics", url: "https://www.fanatics.com/nba/o-1370+z-938737729-293541727" },
   { id: "nike", label: "Nike SNKRS", url: "https://www.nike.com/launch" },
   { id: "cactus", label: "Cactus Jack", url: "https://shop.travisscott.com" },
 ];
+const AF1_STORES = [
+  { id: "snkrs", label: "Nike SNKRS", url: "https://www.nike.com/launch" },
+  { id: "cactus", label: "Cactus Jack", url: "https://shop.travisscott.com" },
+];
 
 const CACHE_REQ = new Request("https://thewearson.com/__drop-notify-inbox");
+const INDEX_REQ = new Request("https://thewearson.com/__drop-notify-index");
+
+function cleanNewsId(raw, env) {
+  const s = String(raw || "").trim().toLowerCase();
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(s)) return s;
+  return String(env && env.VICE_NEWS_ID || VICE_NEWS_ID);
+}
+
+function packRequest(newsId) {
+  return new Request(`https://thewearson.com/__drop-notify-inbox/${newsId}`);
+}
 
 function corsHeaders(request) {
   const origin = String(request.headers.get("Origin") || "");
@@ -69,20 +87,48 @@ function emptyPack() {
   return { emails: [], sent: false, lockDone: false, cursor: 0, sentStoreIds: [], wave: null };
 }
 
-async function loadPack(env) {
+async function loadIndex(env) {
+  const hit = await caches.default.match(INDEX_REQ);
+  const raw = hit ? await hit.json().catch(() => ({})) : {};
+  const ids = [...new Set([VICE_NEWS_ID, AF1_NEWS_ID, ...((raw && raw.ids) || [])].map((id) => cleanNewsId(id, env)))];
+  return { ids };
+}
+
+async function rememberNews(env, newsId) {
+  const id = cleanNewsId(newsId, env);
+  const idx = await loadIndex(env);
+  if (idx.ids.includes(id)) return;
+  idx.ids.push(id);
+  await caches.default.put(INDEX_REQ, new Response(JSON.stringify(idx), {
+    headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=2592000" },
+  }));
+}
+
+async function loadPack(env, newsId) {
+  const id = cleanNewsId(newsId, env);
   const stub = dropStub(env);
   if (stub) {
     const listed = await stub.fetch("https://drop.notify/list");
     const raw = await listed.json().catch(() => ({}));
     return { ...emptyPack(), ...raw };
   }
-  const hit = await caches.default.match(CACHE_REQ);
-  if (!hit) return emptyPack();
-  const raw = await hit.json().catch(() => ({}));
-  return { ...emptyPack(), ...raw };
+  const hit = await caches.default.match(packRequest(id));
+  if (hit) {
+    const raw = await hit.json().catch(() => ({}));
+    return { ...emptyPack(), ...raw };
+  }
+  if (id === VICE_NEWS_ID) {
+    const legacy = await caches.default.match(CACHE_REQ);
+    if (legacy) {
+      const raw = await legacy.json().catch(() => ({}));
+      return { ...emptyPack(), ...raw };
+    }
+  }
+  return emptyPack();
 }
 
-async function savePack(env, pack) {
+async function savePack(env, pack, newsId) {
+  const id = cleanNewsId(newsId || (pack && pack.newsId), env);
   const stub = dropStub(env);
   if (stub) {
     if (pack.sent) {
@@ -91,30 +137,34 @@ async function savePack(env, pack) {
     }
     return;
   }
-  await caches.default.put(CACHE_REQ, new Response(JSON.stringify(pack), {
+  const body = new Response(JSON.stringify({ ...pack, newsId: id }), {
     headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=2592000" },
-  }));
+  });
+  await caches.default.put(packRequest(id), body.clone());
+  if (id === VICE_NEWS_ID) await caches.default.put(CACHE_REQ, body);
 }
 
-async function upsertEmail(env, email, off) {
+async function upsertEmail(env, email, off, newsId) {
+  const id = cleanNewsId(newsId, env);
+  await rememberNews(env, id);
   const stub = dropStub(env);
   if (stub) {
     const res = await stub.fetch("https://drop.notify/sub", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, off }),
+      body: JSON.stringify({ email, off, newsId: id }),
     });
     const data = await res.json().catch(() => ({}));
     return { ok: res.ok, status: res.status, data };
   }
-  const pack = await loadPack(env);
+  const pack = await loadPack(env, id);
   const cur = new Set(Array.isArray(pack.emails) ? pack.emails : []);
   if (off) cur.delete(email);
   else {
     if (cur.size >= 10000) return { ok: false, status: 429, data: { error: "List full." } };
     cur.add(email);
   }
-  await savePack(env, { ...pack, emails: [...cur] });
+  await savePack(env, { ...pack, emails: [...cur] }, id);
   return { ok: true, status: 200, data: { n: cur.size } };
 }
 
@@ -211,6 +261,7 @@ function hrefAbs(raw) {
 
 function storeId(label, url, fallback) {
   const s = `${label} ${url}`.toLowerCase();
+  if (fallback === "snkrs" && /snkrs|nike/.test(s)) return "snkrs";
   if (/nike|snkrs/.test(s)) return "nike";
   if (/fanatics/.test(s)) return "fanatics";
   if (/nba/.test(s)) return "nba";
@@ -278,10 +329,44 @@ function formatWhen(iso) {
   }
 }
 
-async function loadLiveDrop(env) {
-  const newsId = env.VICE_NEWS_ID || "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
-  const fallback = {
-    newsId,
+function overlayStores(base, list, extra) {
+  const overlay = {};
+  const byUrl = {};
+  for (const s of normalizeStores(list)) {
+    overlay[s.id] = s;
+    byUrl[s.url.replace(/\/+$/, "")] = s;
+  }
+  const out = [];
+  const seen = new Set();
+  for (const b of base) {
+    const u = hrefAbs(b.url).replace(/\/+$/, "");
+    const hit = overlay[b.id] || (b.id === "snkrs" ? overlay.nike : null) || byUrl[u] || {};
+    out.push({ id: b.id, label: hit.label || b.label, url: hit.url || b.url });
+    seen.add(b.id);
+  }
+  if (!extra) return out;
+  for (const s of normalizeStores(list)) {
+    if (seen.has(s.id)) continue;
+    const u = s.url.replace(/\/+$/, "");
+    if (out.some((x) => x.url.replace(/\/+$/, "") === u)) continue;
+    out.push(s);
+    seen.add(s.id);
+  }
+  return out;
+}
+
+async function loadLiveDrop(env, newsId) {
+  const id = cleanNewsId(newsId, env);
+  const af1 = id === AF1_NEWS_ID;
+  const fallback = af1 ? {
+    newsId: id,
+    at: AF1_AT,
+    title: "GTA 6 × TRAVIS SCOTT - ONLY 600 PAIRS OF THE MULTICOLOR AF1",
+    when: formatWhen(AF1_AT),
+    stores: normalizeStores(AF1_STORES),
+    on: true,
+  } : {
+    newsId: id,
     at: env.VICE_AT || "2026-11-20T15:00:00Z",
     title: "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI",
     when: "20 NOV 2026 · 10:00 AM ET",
@@ -292,7 +377,7 @@ async function loadLiveDrop(env) {
   const key = env.SUPABASE_ANON_KEY || env.WEARS_SUPABASE_ANON_KEY || SB_KEY;
   let row = null;
   try {
-    const res = await fetch(`${sb}/rest/v1/drip_news?id=eq.${encodeURIComponent(newsId)}&select=id,title,product_name,drop_json,buy_note,buy_url`, {
+    const res = await fetch(`${sb}/rest/v1/drip_news?id=eq.${encodeURIComponent(id)}&select=id,title,product_name,buy_note,buy_url`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` },
     });
     const rows = await res.json().catch(() => []);
@@ -301,18 +386,20 @@ async function loadLiveDrop(env) {
     row = null;
   }
   if (!row) return fallback;
-  const json = parseDropJson(row.drop_json);
   const packed = parseDropNote(row.buy_note);
-  const stores = normalizeStores(json?.stores?.length ? json.stores : packed.stores.length ? packed.stores : VICE_STORES);
-  const at = String(json?.at || packed.at || fallback.at);
-  const title = String(json?.title || row.product_name || row.title || fallback.title);
+  const listed = packed.stores.length ? packed.stores : [];
+  const stores = af1
+    ? overlayStores(AF1_STORES, listed, false)
+    : (id === VICE_NEWS_ID ? overlayStores(VICE_STORES, listed, true) : (normalizeStores(listed).length ? normalizeStores(listed) : fallback.stores));
+  const at = String(packed.at || fallback.at);
+  const title = String(row.product_name || row.title || fallback.title);
   return {
-    newsId,
+    newsId: id,
     at,
     title,
     when: formatWhen(at),
     stores,
-    on: json?.on !== false && !packed.off,
+    on: !packed.off,
   };
 }
 
@@ -449,9 +536,10 @@ export async function dropNotifyResponse(request, env) {
   try { body = await request.json(); } catch { return corsJson(request, 400, { error: "Bad JSON." }); }
   const email = cleanEmail(body.email);
   if (!email) return corsJson(request, 400, { error: "Email required." });
-  const out = await upsertEmail(env, email, body.off === true);
+  const newsId = cleanNewsId(body.newsId, env);
+  const out = await upsertEmail(env, email, body.off === true, newsId);
   if (!out.ok) return corsJson(request, out.status, out.data);
-  return corsJson(request, 200, { ok: true, on: body.off !== true });
+  return corsJson(request, 200, { ok: true, on: body.off !== true, newsId });
 }
 
 function sameSecret(a, b) {
@@ -478,11 +566,12 @@ function waveKey(storeIds, early) {
   return `${early ? "early" : "lock"}:${ids.join("+") || "none"}`;
 }
 
-async function sendWave(env, pack, emails, wave, sentStoreIds) {
+async function sendWave(env, pack, emails, wave, sentStoreIds, newsId) {
+  const id = cleanNewsId(newsId || wave.newsId, env);
   const stores = Array.isArray(wave.stores) ? wave.stores : [];
-  if (!stores.length) return { error: "No stores on card." };
+  if (!stores.length) return { error: "No stores on card.", newsId: id };
   if (!emails.length) {
-    return { sent: 0, done: true, empty: true, storeIds: wave.storeIds || [], sentStoreIds };
+    return { sent: 0, done: true, empty: true, storeIds: wave.storeIds || [], sentStoreIds, newsId: id };
   }
   const start = Math.max(0, Number(wave.cursor || 0) || 0);
   const batch = emails.slice(start, start + 40);
@@ -494,8 +583,8 @@ async function sendWave(env, pack, emails, wave, sentStoreIds) {
       sentStoreIds: nextSent,
       lockDone: !!(pack.lockDone || !wave.early),
       wave: { ...wave, cursor: emails.length, done: true },
-    });
-    return { sent: 0, done: true, storeIds: wave.storeIds || [], sentStoreIds: nextSent, total: emails.length };
+    }, id);
+    return { sent: 0, done: true, storeIds: wave.storeIds || [], sentStoreIds: nextSent, total: emails.length, newsId: id };
   }
   const subject = dropMailSubject(stores);
   const text = dropMailText(wave);
@@ -505,7 +594,7 @@ async function sendWave(env, pack, emails, wave, sentStoreIds) {
     const res = await fetch(hook, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fire: true, emails: batch, html, text, subject, storeIds: wave.storeIds || [] }),
+      body: JSON.stringify({ fire: true, emails: batch, html, text, subject, storeIds: wave.storeIds || [], newsId: id }),
     });
     if (!res.ok) throw new Error(`mail hook ${res.status}`);
   } else {
@@ -520,7 +609,7 @@ async function sendWave(env, pack, emails, wave, sentStoreIds) {
     sentStoreIds: nextSent,
     lockDone: !!(pack.lockDone || (done && !wave.early)),
     wave: { ...wave, cursor: next, done },
-  });
+  }, id);
   return {
     sent: batch.length,
     cursor: next,
@@ -529,11 +618,13 @@ async function sendWave(env, pack, emails, wave, sentStoreIds) {
     storeIds: wave.storeIds || [],
     sentStoreIds: nextSent,
     early: !!wave.early,
+    newsId: id,
   };
 }
 
-export async function sendDueDropMail(env, opt = {}) {
-  const pack = await loadPack(env);
+async function sendOneDropMail(env, newsId, opt = {}) {
+  const id = cleanNewsId(newsId, env);
+  const pack = await loadPack(env, id);
   const emails = Array.isArray(pack.emails) ? pack.emails : [];
   const sentStoreIds = [...new Set((pack.sentStoreIds || []).map(String))];
   let wave = pack.wave && typeof pack.wave === "object" ? pack.wave : null;
@@ -543,20 +634,20 @@ export async function sendDueDropMail(env, opt = {}) {
 
   if (wave && !wave.done && Array.isArray(wave.stores) && wave.stores.length) {
     if (studioIds.length && waveKey(studioIds, true) !== wave.key) {
-      return { busy: true, wave: { key: wave.key, storeIds: wave.storeIds, cursor: wave.cursor, done: false } };
+      return { busy: true, newsId: id, wave: { key: wave.key, storeIds: wave.storeIds, cursor: wave.cursor, done: false } };
     }
-    return sendWave(env, pack, emails, wave, sentStoreIds);
+    return sendWave(env, pack, emails, wave, sentStoreIds, id);
   }
 
-  const live = await loadLiveDrop(env);
+  const live = await loadLiveDrop(env, id);
 
   if (studioIds.length) {
     const want = new Set(studioIds);
     const stores = (live.stores || []).filter((s) => want.has(s.id) && s.url);
-    if (!stores.length) return { error: "No matching live store URLs. Save the dispatch first." };
+    if (!stores.length) return { error: "No matching live store URLs. Save the dispatch first.", newsId: id };
     const ids = stores.map((s) => s.id);
-    if (!opt.again && ids.every((id) => sentStoreIds.includes(id))) {
-      return { already: true, sentStoreIds, storeIds: ids };
+    if (!opt.again && ids.every((sid) => sentStoreIds.includes(sid))) {
+      return { already: true, sentStoreIds, storeIds: ids, newsId: id };
     }
     wave = {
       key: waveKey(ids, true),
@@ -569,14 +660,14 @@ export async function sendDueDropMail(env, opt = {}) {
       done: false,
       early: true,
     };
-    return sendWave(env, pack, emails, wave, sentStoreIds);
+    return sendWave(env, pack, emails, wave, sentStoreIds, id);
   }
 
-  const at = Date.parse(live.at || env.VICE_AT || "2026-11-20T15:00:00Z");
-  if (!Number.isFinite(at) || (Date.now() < at && !opt.force)) return { skipped: true };
-  if (!live.on) return { skipped: true, off: true };
+  const at = Date.parse(live.at);
+  if (!Number.isFinite(at) || (Date.now() < at && !opt.force)) return { skipped: true, newsId: id };
+  if (!live.on) return { skipped: true, off: true, newsId: id };
   const stores = (live.stores || []).filter((s) => s.url && !sentStoreIds.includes(s.id));
-  if (!stores.length) return { already: true, done: true, sentStoreIds };
+  if (!stores.length) return { already: true, done: true, sentStoreIds, newsId: id };
   wave = {
     key: waveKey(stores.map((s) => s.id), false),
     stores,
@@ -588,7 +679,22 @@ export async function sendDueDropMail(env, opt = {}) {
     done: false,
     early: false,
   };
-  return sendWave(env, pack, emails, wave, sentStoreIds);
+  return sendWave(env, pack, emails, wave, sentStoreIds, id);
+}
+
+export async function sendDueDropMail(env, opt = {}) {
+  if (opt.newsId || opt.studio) {
+    if (opt.studio && !opt.newsId) return { error: "newsId required." };
+    return sendOneDropMail(env, opt.newsId, opt);
+  }
+  const idx = await loadIndex(env);
+  let last = { skipped: true };
+  for (const id of idx.ids) {
+    const out = await sendOneDropMail(env, id, opt);
+    last = { ...out, newsId: id };
+    if (out.sent > 0 || out.busy || (out.done === false && Number(out.cursor || 0) > 0)) return last;
+  }
+  return last;
 }
 
 export async function dropTickResponse(request, env) {
@@ -597,7 +703,8 @@ export async function dropTickResponse(request, env) {
   let body = {};
   try { body = await request.json(); } catch { body = {}; }
   try {
-    const out = await sendDueDropMail(env, { live: body.live === true });
+    const newsId = body.newsId ? cleanNewsId(body.newsId, env) : "";
+    const out = await sendDueDropMail(env, { live: body.live === true, newsId: newsId || undefined });
     return corsJson(request, 200, { ok: true, ...out });
   } catch (err) {
     return corsJson(request, 500, { error: String(err && err.message || err) });
@@ -609,10 +716,13 @@ export async function dropStudioResponse(request, env) {
   if (!(await studioAuthorized(request, env))) {
     return corsJson(request, 401, { error: "Studio auth failed." });
   }
+  const url = new URL(request.url);
   if (request.method === "GET") {
-    const pack = await loadPack(env);
+    const newsId = cleanNewsId(url.searchParams.get("newsId") || env.VICE_NEWS_ID, env);
+    const pack = await loadPack(env, newsId);
     return corsJson(request, 200, {
       ok: true,
+      newsId,
       n: (pack.emails || []).length,
       sentStoreIds: pack.sentStoreIds || [],
       lockDone: !!pack.lockDone,
@@ -628,12 +738,13 @@ export async function dropStudioResponse(request, env) {
   if (request.method !== "POST") return corsJson(request, 405, { error: "POST or GET." });
   let body = {};
   try { body = await request.json(); } catch { body = {}; }
+  const newsId = cleanNewsId(body.newsId || url.searchParams.get("newsId"), env);
   const storeIds = Array.isArray(body.storeIds)
     ? body.storeIds.map((s) => String(s || "").trim()).filter(Boolean).slice(0, 6)
     : [];
   if (!storeIds.length) return corsJson(request, 400, { error: "storeIds required." });
   try {
-    const out = await sendDueDropMail(env, { studio: true, storeIds, again: body.again === true });
+    const out = await sendDueDropMail(env, { studio: true, storeIds, again: body.again === true, newsId });
     const status = out.error ? 400 : 200;
     return corsJson(request, status, { ok: !out.error, ...out });
   } catch (err) {
