@@ -150,17 +150,13 @@
       dropAuto: "AUTO-REDIRECT AT DROP",
       dropAutoD: "AT 10:00 AM ET THE SELECTED STORE OPENS.",
       dropDefault: "DEFAULT STORE",
-      dropNotify: "NOTIFY ME",
-      dropNotifying: "NOTIFYING",
-      dropMail: "EMAIL FOR NOTIFY",
+      dropMail: "NOTIFY BY EMAIL",
+      dropMailOn: "EMAIL ARMED",
       dropMailD: "WHEN THE LOCK OPENS, THE WEARS ON MAILS THE MEMBER CARD FROM THEWEARS.ON@GMAIL.COM. TAB CLOSED — YOU STILL GET IT.",
       dropMailGo: "ARM EMAIL",
-      dropMailApp: "OPEN MAIL APP",
       dropMailNeed: "ENTER YOUR EMAIL.",
       dropMailOk: "ARMED. THE WEARS ON MAILS YOU WHEN THE LOCK OPENS.",
       dropMailFail: "COULD NOT ARM EMAIL. TRY AGAIN.",
-      dropNotifyOk: "ARMED. WHEN THE LOCK OPENS, THE WEARS ON MAILS YOU FROM THEWEARS.ON@GMAIL.COM.",
-      dropNotifyDenied: "MAIL STILL GOES OUT. BROWSER ALERTS ARE BLOCKED.",
       dropShop: "SHOP NOW",
       legalFooter: "© 2027 RACKSGRID",
       country: "COUNTRY", regionOpt: "CONTENT REGION (OPTIONAL)",
@@ -274,17 +270,13 @@
       dropAuto: "DROP ANINDA OTOMATİK YÖNLENDİR",
       dropAutoD: "10:00 AM ET’DE SEÇİLİ MAĞAZA AÇILIR.",
       dropDefault: "VARSAYILAN MAĞAZA",
-      dropNotify: "HABER VER",
-      dropNotifying: "HABER AÇIK",
-      dropMail: "E-POSTA ADRESİ",
+      dropMail: "E-POSTA İLE HABER VER",
+      dropMailOn: "E-POSTA KAYITLI",
       dropMailD: "KİLİT AÇILINCA THE WEARS ON, ÜYE KARTINI THEWEARS.ON@GMAIL.COM’DAN ATAR. SEKME KAPALI OLSA DA GELİR.",
       dropMailGo: "E-POSTAYI KAYDET",
-      dropMailApp: "MAIL UYGULAMASI",
       dropMailNeed: "E-POSTANI YAZ.",
       dropMailOk: "TAMAM. KİLİT AÇILINCA THE WEARS ON MAIL ATAR.",
       dropMailFail: "E-POSTA KAYDEDİLEMEDİ. TEKRAR DENE.",
-      dropNotifyOk: "TAMAM. KİLİT AÇILINCA THEWEARS.ON@GMAIL.COM’DAN ÜYE KARTI GELİR.",
-      dropNotifyDenied: "MAIL YİNE GİDER. TARAYICI İZNİ KAPALI.",
       dropShop: "ŞİMDİ AL",
       legalFooter: "© 2027 RACKSGRID",
       country: "ÜLKE", regionOpt: "İÇERİK BÖLGESİ (OPSİYONEL)",
@@ -994,8 +986,7 @@
       </div>
       <div class="drop-buys">${drop.stores.map((s) => `<a class="drop-buy ${prefs.store === s.id ? "is-on" : ""}" href="${esc(s.url)}" target="_blank" rel="noopener" data-visit data-drop-pick="${esc(s.id)}">${esc(s.label)}</a>`).join("")}</div>
       <div class="drop-acts">
-        <button class="drop-act ${prefs.notify ? "is-on" : ""}" type="button" data-drop-notify>${prefs.notify ? t("dropNotifying") : t("dropNotify")}</button>
-        <button class="drop-act" type="button" data-drop-mail>${t("dropMail")}</button>
+        <button class="drop-act ${prefs.notify ? "is-on" : ""}" type="button" data-drop-mail>${prefs.notify ? t("dropMailOn") : t("dropMail")}</button>
       </div>
     </section>`;
   }
@@ -1023,16 +1014,6 @@
   }
   function markDropFired(drop) {
     try { sessionStorage.setItem(dropFiredKey(drop), "1"); } catch { /* private */ }
-  }
-  function dropPush(drop) {
-    if (!drop || typeof Notification === "undefined") return;
-    if (Notification.permission !== "granted") return;
-    try {
-      new Notification("THE WEARS ON", {
-        body: t("dropLiveShop"),
-        tag: `tw-drop-${drop.newsId}`,
-      });
-    } catch { /* blocked */ }
   }
   function dropToast(drop) {
     if (!drop) return;
@@ -1075,7 +1056,6 @@
     const prefs = dropPrefs(drop);
     if (dropWasFired(drop) && !opt.force) return;
     markDropFired(drop);
-    if (prefs.notify) dropPush(drop);
     if (prefs.auto && !opt.noRedirect) {
       const store = pickDropStore(drop, prefs.store);
       if (store?.url) {
@@ -1156,37 +1136,11 @@
     box.querySelectorAll("[data-drop-pick]").forEach((el) => {
       el.classList.toggle("is-on", el.dataset.dropPick === prefs.store);
     });
-    const notifyBtn = box.querySelector("[data-drop-notify]");
-    if (notifyBtn) {
-      notifyBtn.classList.toggle("is-on", prefs.notify);
-      notifyBtn.textContent = prefs.notify ? t("dropNotifying") : t("dropNotify");
+    const mailBtn = box.querySelector("[data-drop-mail]");
+    if (mailBtn) {
+      mailBtn.classList.toggle("is-on", prefs.notify);
+      mailBtn.textContent = prefs.notify ? t("dropMailOn") : t("dropMail");
     }
-  }
-  async function toggleDropNotify(id) {
-    const drop = dropById(id);
-    if (!drop) return;
-    const on = !dropPrefs(drop).notify;
-    if (on) {
-      const email = accountEmail();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        openDropMail(id);
-        return;
-      }
-      writeDropPref(drop, "notify", true);
-      const armed = await armDropMail(drop, email, false);
-      if (typeof Notification !== "undefined" && Notification.permission === "default") {
-        try { await Notification.requestPermission(); } catch { /* ignore */ }
-      }
-      if (!armed.ok) snack(t("dropMailFail"));
-      else if (typeof Notification !== "undefined" && Notification.permission === "denied") snack(t("dropNotifyDenied"));
-      else snack(t("dropNotifyOk"));
-    } else {
-      writeDropPref(drop, "notify", false);
-      const email = accountEmail();
-      if (email) await armDropMail(drop, email, true);
-    }
-    syncDropChrome();
-    armDropWatch();
   }
   function toggleDropAuto(id) {
     const drop = dropById(id);
@@ -1202,25 +1156,6 @@
     if (!drop || !storeId) return;
     setDropStorePref(drop, storeId);
     syncDropChrome();
-  }
-  function dropPageHref(drop) {
-    return `${location.origin}/#/n/${encodeURIComponent(drop.newsId)}`;
-  }
-  function dropStoreLines(drop) {
-    return (drop?.stores || []).map((s) => `${s.label}: ${s.url}`).join("\n");
-  }
-  function dropMailCopy(drop) {
-    const page = dropPageHref(drop);
-    const body = [
-      "THE WEARS ON — DROP REMINDER",
-      "",
-      dropWhenLine(drop.at),
-      "",
-      dropStoreLines(drop),
-      "",
-      page,
-    ].join("\n");
-    return { subject: drop.title, body, page };
   }
   function accountEmail() {
     return String(state.me?.email || state.session?.user?.email || dropLs("tw.drop.email") || "").trim();
@@ -1287,11 +1222,8 @@
       return;
     }
     dropPingQueued = false;
-    const email = accountEmail();
     drops.forEach((drop) => {
-      writeDropPref(drop, "notify", true);
-      if (email) armDropMail(drop, email, false);
-      if (dropRemain(drop.at) <= 0) fireDrop(drop, { toast: true, noRedirect: true, force: !dropWasFired(drop) });
+      if (dropRemain(drop.at) <= 0) fireDrop(drop, { toast: dropPrefs(drop).notify, noRedirect: true, force: !dropWasFired(drop) });
     });
     armDropWatch();
   }
@@ -4056,12 +3988,6 @@
     if (dropAuto) {
       e.preventDefault();
       toggleDropAuto(dropAuto.closest("[data-drop]")?.dataset.drop);
-      return;
-    }
-    const dropNotify = e.target.closest("[data-drop-notify]");
-    if (dropNotify) {
-      e.preventDefault();
-      toggleDropNotify(dropNotify.closest("[data-drop]")?.dataset.drop);
       return;
     }
     const dropMail = e.target.closest("[data-drop-mail]");
