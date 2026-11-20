@@ -1,5 +1,7 @@
 const VICE_NEWS_ID = "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
 const AF1_NEWS_ID = "75460ba6-0d53-402b-ad25-7a5a5a36dc7e";
+const AF1_SHAPE_ID = "93e33b2f-e4e0-494d-b43d-34609210ab13";
+const AF1_NEWS_IDS = [AF1_NEWS_ID, AF1_SHAPE_ID];
 const AF1_AT = "2026-11-21T15:00:00Z";
 const VICE_STORES = [
   { id: "nba", label: "NBA Store", url: "https://store.nba.com" },
@@ -19,6 +21,15 @@ function cleanNewsId(raw, env) {
   const s = String(raw || "").trim().toLowerCase();
   if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(s)) return s;
   return String(env && env.VICE_NEWS_ID || VICE_NEWS_ID);
+}
+
+function isAf1Id(id) {
+  return AF1_NEWS_IDS.includes(String(id || "").toLowerCase());
+}
+
+function packId(raw, env) {
+  const id = cleanNewsId(raw, env);
+  return isAf1Id(id) ? AF1_NEWS_ID : id;
 }
 
 function packRequest(newsId) {
@@ -90,12 +101,12 @@ function emptyPack() {
 async function loadIndex(env) {
   const hit = await caches.default.match(INDEX_REQ);
   const raw = hit ? await hit.json().catch(() => ({})) : {};
-  const ids = [...new Set([VICE_NEWS_ID, AF1_NEWS_ID, ...((raw && raw.ids) || [])].map((id) => cleanNewsId(id, env)))];
+  const ids = [...new Set([VICE_NEWS_ID, AF1_NEWS_ID, ...((raw && raw.ids) || [])].map((id) => packId(id, env)))];
   return { ids };
 }
 
 async function rememberNews(env, newsId) {
-  const id = cleanNewsId(newsId, env);
+  const id = packId(newsId, env);
   const idx = await loadIndex(env);
   if (idx.ids.includes(id)) return;
   idx.ids.push(id);
@@ -104,31 +115,52 @@ async function rememberNews(env, newsId) {
   }));
 }
 
+async function readCachePack(newsId) {
+  const hit = await caches.default.match(packRequest(newsId));
+  if (!hit) return null;
+  const raw = await hit.json().catch(() => ({}));
+  return raw && typeof raw === "object" ? raw : null;
+}
+
+function mergePacks(base, extra) {
+  const a = { ...emptyPack(), ...(base || {}) };
+  const b = extra && typeof extra === "object" ? extra : {};
+  const emails = [...new Set([...(a.emails || []), ...(b.emails || [])])];
+  const sentStoreIds = [...new Set([...(a.sentStoreIds || []), ...(b.sentStoreIds || [])].map(String))];
+  return {
+    ...a,
+    emails,
+    sentStoreIds,
+    lockDone: !!(a.lockDone || b.lockDone),
+    sent: !!(a.sent || b.sent),
+    wave: a.wave && !a.wave.done ? a.wave : (b.wave && !b.wave.done ? b.wave : a.wave || b.wave || null),
+  };
+}
+
 async function loadPack(env, newsId) {
-  const id = cleanNewsId(newsId, env);
+  const id = packId(newsId, env);
   const stub = dropStub(env);
   if (stub) {
     const listed = await stub.fetch("https://drop.notify/list");
     const raw = await listed.json().catch(() => ({}));
     return { ...emptyPack(), ...raw };
   }
-  const hit = await caches.default.match(packRequest(id));
-  if (hit) {
-    const raw = await hit.json().catch(() => ({}));
-    return { ...emptyPack(), ...raw };
-  }
+  let pack = { ...emptyPack(), ...(await readCachePack(id) || {}) };
   if (id === VICE_NEWS_ID) {
     const legacy = await caches.default.match(CACHE_REQ);
-    if (legacy) {
-      const raw = await legacy.json().catch(() => ({}));
-      return { ...emptyPack(), ...raw };
+    if (legacy) pack = mergePacks(pack, await legacy.json().catch(() => ({})));
+  }
+  if (id === AF1_NEWS_ID) {
+    for (const extra of AF1_NEWS_IDS) {
+      if (extra === id) continue;
+      pack = mergePacks(pack, await readCachePack(extra));
     }
   }
-  return emptyPack();
+  return pack;
 }
 
 async function savePack(env, pack, newsId) {
-  const id = cleanNewsId(newsId || (pack && pack.newsId), env);
+  const id = packId(newsId || (pack && pack.newsId), env);
   const stub = dropStub(env);
   if (stub) {
     if (pack.sent) {
@@ -145,7 +177,7 @@ async function savePack(env, pack, newsId) {
 }
 
 async function upsertEmail(env, email, off, newsId) {
-  const id = cleanNewsId(newsId, env);
+  const id = packId(newsId, env);
   await rememberNews(env, id);
   const stub = dropStub(env);
   if (stub) {
@@ -355,49 +387,76 @@ function overlayStores(base, list, extra) {
   return out;
 }
 
+async function fetchNewsRows(env, ids) {
+  const unique = [...new Set((ids || []).map((id) => String(id || "").toLowerCase()).filter(Boolean))];
+  if (!unique.length) return [];
+  const sb = String(env.SUPABASE_URL || env.WEARS_SUPABASE_URL || SB_URL).replace(/\/$/, "");
+  const key = env.SUPABASE_ANON_KEY || env.WEARS_SUPABASE_ANON_KEY || SB_KEY;
+  try {
+    const res = await fetch(`${sb}/rest/v1/drip_news?id=in.(${unique.join(",")})&select=id,title,product_name,buy_note,buy_url`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    const rows = await res.json().catch(() => []);
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+
 async function loadLiveDrop(env, newsId) {
-  const id = cleanNewsId(newsId, env);
+  const requested = cleanNewsId(newsId, env);
+  const id = packId(requested, env);
   const af1 = id === AF1_NEWS_ID;
   const fallback = af1 ? {
-    newsId: id,
+    newsId: requested,
     at: AF1_AT,
     title: "GTA 6 × TRAVIS SCOTT - ONLY 600 PAIRS OF THE MULTICOLOR AF1",
     when: formatWhen(AF1_AT),
     stores: normalizeStores(AF1_STORES),
     on: true,
   } : {
-    newsId: id,
+    newsId: requested,
     at: env.VICE_AT || "2026-11-20T15:00:00Z",
     title: "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI",
     when: "20 NOV 2026 · 10:00 AM ET",
     stores: normalizeStores(VICE_STORES),
     on: true,
   };
-  const sb = String(env.SUPABASE_URL || env.WEARS_SUPABASE_URL || SB_URL).replace(/\/$/, "");
-  const key = env.SUPABASE_ANON_KEY || env.WEARS_SUPABASE_ANON_KEY || SB_KEY;
-  let row = null;
-  try {
-    const res = await fetch(`${sb}/rest/v1/drip_news?id=eq.${encodeURIComponent(id)}&select=id,title,product_name,buy_note,buy_url`, {
-      headers: { apikey: key, Authorization: `Bearer ${key}` },
-    });
-    const rows = await res.json().catch(() => []);
-    row = Array.isArray(rows) ? rows[0] : null;
-  } catch {
-    row = null;
+  const rows = await fetchNewsRows(env, af1 ? AF1_NEWS_IDS : [requested]);
+  if (!rows.length) return fallback;
+  const requestedRow = rows.find((r) => String(r.id).toLowerCase() === requested)
+    || rows.find((r) => String(r.id).toLowerCase() === id)
+    || rows[0];
+  if (af1) {
+    let stores = normalizeStores(AF1_STORES);
+    let at = AF1_AT;
+    let on = false;
+    const ordered = [...rows.filter((r) => r !== requestedRow), requestedRow];
+    for (const row of ordered) {
+      const packed = parseDropNote(row.buy_note);
+      if (!packed.off) on = true;
+      if (packed.at) at = packed.at;
+      stores = overlayStores(stores, packed.stores, false);
+    }
+    return {
+      newsId: requested,
+      at,
+      title: String(requestedRow.title || requestedRow.product_name || fallback.title),
+      when: formatWhen(at),
+      stores,
+      on,
+    };
   }
-  if (!row) return fallback;
-  const packed = parseDropNote(row.buy_note);
+  const packed = parseDropNote(requestedRow.buy_note);
   const listed = packed.stores.length ? packed.stores : [];
-  const stores = af1
-    ? overlayStores(AF1_STORES, listed, false)
-    : (id === VICE_NEWS_ID ? overlayStores(VICE_STORES, listed, true) : (normalizeStores(listed).length ? normalizeStores(listed) : fallback.stores));
-  const at = String(packed.at || fallback.at);
-  const title = String(row.product_name || row.title || fallback.title);
+  const stores = requested === VICE_NEWS_ID
+    ? overlayStores(VICE_STORES, listed, true)
+    : (normalizeStores(listed).length ? normalizeStores(listed) : fallback.stores);
   return {
-    newsId: id,
-    at,
-    title,
-    when: formatWhen(at),
+    newsId: requested,
+    at: String(packed.at || fallback.at),
+    title: String(requestedRow.product_name || requestedRow.title || fallback.title),
+    when: formatWhen(packed.at || fallback.at),
     stores,
     on: !packed.off,
   };
@@ -567,7 +626,7 @@ function waveKey(storeIds, early) {
 }
 
 async function sendWave(env, pack, emails, wave, sentStoreIds, newsId) {
-  const id = cleanNewsId(newsId || wave.newsId, env);
+  const id = packId(newsId || wave.newsId, env);
   const stores = Array.isArray(wave.stores) ? wave.stores : [];
   if (!stores.length) return { error: "No stores on card.", newsId: id };
   if (!emails.length) {
@@ -623,7 +682,8 @@ async function sendWave(env, pack, emails, wave, sentStoreIds, newsId) {
 }
 
 async function sendOneDropMail(env, newsId, opt = {}) {
-  const id = cleanNewsId(newsId, env);
+  const requested = cleanNewsId(newsId, env);
+  const id = packId(requested, env);
   const pack = await loadPack(env, id);
   const emails = Array.isArray(pack.emails) ? pack.emails : [];
   const sentStoreIds = [...new Set((pack.sentStoreIds || []).map(String))];
@@ -639,7 +699,7 @@ async function sendOneDropMail(env, newsId, opt = {}) {
     return sendWave(env, pack, emails, wave, sentStoreIds, id);
   }
 
-  const live = await loadLiveDrop(env, id);
+  const live = await loadLiveDrop(env, requested);
 
   if (studioIds.length) {
     const want = new Set(studioIds);
@@ -718,7 +778,7 @@ export async function dropStudioResponse(request, env) {
   }
   const url = new URL(request.url);
   if (request.method === "GET") {
-    const newsId = cleanNewsId(url.searchParams.get("newsId") || env.VICE_NEWS_ID, env);
+    const newsId = packId(url.searchParams.get("newsId") || env.VICE_NEWS_ID, env);
     const pack = await loadPack(env, newsId);
     return corsJson(request, 200, {
       ok: true,
@@ -738,7 +798,7 @@ export async function dropStudioResponse(request, env) {
   if (request.method !== "POST") return corsJson(request, 405, { error: "POST or GET." });
   let body = {};
   try { body = await request.json(); } catch { body = {}; }
-  const newsId = cleanNewsId(body.newsId || url.searchParams.get("newsId"), env);
+  const newsId = packId(body.newsId || url.searchParams.get("newsId"), env);
   const storeIds = Array.isArray(body.storeIds)
     ? body.storeIds.map((s) => String(s || "").trim()).filter(Boolean).slice(0, 6)
     : [];

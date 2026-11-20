@@ -712,6 +712,8 @@
   const VICE_NEWS_ID = "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
   const VICE_AT = "2026-11-20T15:00:00Z";
   const AF1_NEWS_ID = "75460ba6-0d53-402b-ad25-7a5a5a36dc7e";
+  const AF1_SHAPE_ID = "93e33b2f-e4e0-494d-b43d-34609210ab13";
+  const AF1_NEWS_IDS = [AF1_NEWS_ID, AF1_SHAPE_ID];
   const AF1_AT = "2026-11-21T15:00:00Z";
   const VICE_STORES = [
     { id: "nba", label: "NBA Store", url: "https://store.nba.com" },
@@ -747,7 +749,11 @@
     return s.includes("MIAMI HEAT") && s.includes("CACTUS JACK");
   }
   function looksAf1(row) {
-    return String(row?.id || "") === AF1_NEWS_ID;
+    const id = String(row?.id || "").toLowerCase();
+    if (AF1_NEWS_IDS.includes(id)) return true;
+    const title = String(row?.title || "").toUpperCase();
+    if (!title || title.includes("MIAMI HEAT")) return false;
+    return title.includes("GTA 6") && title.includes("TRAVIS SCOTT");
   }
   function parseDropJson(raw) {
     if (!raw) return null;
@@ -862,6 +868,7 @@
       stores,
       defaultId: vice ? "nba" : af1 ? "snkrs" : String(json?.defaultId || stores[0].id),
       vice,
+      af1,
     };
   }
   function dropLs(key, val) {
@@ -872,12 +879,24 @@
     } catch { return ""; }
     return val === undefined ? "" : String(val);
   }
+  function dropFam(drop) {
+    if (drop?.af1 || looksAf1({ id: drop?.newsId })) return "af1";
+    if (drop?.vice || drop?.newsId === VICE_NEWS_ID) return "vice";
+    return "";
+  }
   function dropPrefs(drop) {
     const id = drop?.newsId || "";
-    const vice = !!(drop && (drop.vice || id === VICE_NEWS_ID));
-    const notify = dropLs(`tw.drop.notify.${id}`) === "true" || (vice && dropLs("vice_city_notify") === "true");
-    const auto = dropLs(`tw.drop.auto.${id}`) === "true";
-    const store = dropLs(`tw.drop.store.${id}`) || drop?.defaultId || drop?.stores?.[0]?.id || "nba";
+    const fam = dropFam(drop);
+    const notify = dropLs(`tw.drop.notify.${id}`) === "true"
+      || (fam === "vice" && dropLs("vice_city_notify") === "true")
+      || (fam === "af1" && (dropLs("tw.drop.notify.af1") === "true" || AF1_NEWS_IDS.some((n) => dropLs(`tw.drop.notify.${n}`) === "true")));
+    const auto = dropLs(`tw.drop.auto.${id}`) === "true"
+      || (fam === "af1" && dropLs("tw.drop.auto.af1") === "true");
+    const store = dropLs(`tw.drop.store.${id}`)
+      || (fam === "af1" ? dropLs("tw.drop.store.af1") : "")
+      || drop?.defaultId
+      || drop?.stores?.[0]?.id
+      || "nba";
     return { notify, auto, store };
   }
   function writeDropPref(drop, kind, on) {
@@ -886,10 +905,13 @@
     const key = kind === "auto" ? `tw.drop.auto.${id}` : `tw.drop.notify.${id}`;
     dropLs(key, on ? "true" : "false");
     if (kind === "notify" && (drop.vice || id === VICE_NEWS_ID)) dropLs("vice_city_notify", on ? "true" : "false");
+    const fam = dropFam(drop);
+    if (fam === "af1") dropLs(kind === "auto" ? "tw.drop.auto.af1" : "tw.drop.notify.af1", on ? "true" : "false");
   }
   function setDropStorePref(drop, storeId) {
     if (!drop?.newsId || !storeId) return;
     dropLs(`tw.drop.store.${drop.newsId}`, storeId);
+    if (dropFam(drop) === "af1") dropLs("tw.drop.store.af1", storeId);
   }
   function dropRemain(at) {
     return new Date(at).getTime() - Date.now();
@@ -1005,7 +1027,7 @@
     });
   }
   function dropFiredKey(drop) {
-    return `tw.drop.fired.${drop.newsId}.${drop.at}`;
+    return `tw.drop.fired.${dropFam(drop) || drop.newsId}.${drop.at}`;
   }
   function dropWasFired(drop) {
     try { return sessionStorage.getItem(dropFiredKey(drop)) === "1"; } catch { return false; }
