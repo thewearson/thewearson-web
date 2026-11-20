@@ -1,0 +1,13 @@
+.git
+.github
+functions
+wrangler.toml
+_routes.json
+.DS_Store
+.tmp-*
+app-icon
+soon.js
+node_modules
+package.json
+package-lock.json
+*.md

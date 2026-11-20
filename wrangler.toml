@@ -1,0 +1,12 @@
+name = "thewearson-web"
+compatibility_date = "2026-11-20"
+main = "functions/worker.js"
+
+[assets]
+directory = "."
+binding = "ASSETS"
+
+[vars]
+GMAIL_USER = "thewears.on@gmail.com"
+VICE_NEWS_ID = "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65"
+VICE_AT = "2026-11-20T15:00:00Z"
