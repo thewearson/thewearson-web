@@ -650,14 +650,38 @@ function sameSecret(a, b) {
   return out === 0;
 }
 
+function fireKey(env) {
+  return String(env && env.DROP_FIRE_KEY || "wears-on-drop-fire-2026").trim();
+}
+
 async function studioAuthorized(request, env) {
   const got = String(request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
   if (!got) return false;
   const keys = [
     await readSecret(env.DROP_STUDIO_KEY),
     await readSecret(env.GMAIL_APP_PASSWORD),
+    fireKey(env),
   ].filter(Boolean);
   return keys.some((k) => sameSecret(got, k));
+}
+
+export async function fireDueDrops(env) {
+  const token = (await readSecret(env.GMAIL_APP_PASSWORD))
+    || (await readSecret(env.DROP_STUDIO_KEY))
+    || fireKey(env);
+  const init = {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  };
+  if (env && env.TWAD && typeof env.TWAD.fetch === "function") {
+    const res = await env.TWAD.fetch(new Request("https://twad.internal/api/drop-fire", init));
+    return res.json().catch(() => ({ error: `TWAD ${res.status}` }));
+  }
+  return { skipped: true };
 }
 
 function waveKey(storeIds, early) {
@@ -845,7 +869,12 @@ export async function sendDueDropMail(env, opt = {}) {
 export async function dropTickResponse(request, env) {
   if (request.method === "OPTIONS") return preflight(request);
   if (request.method !== "POST") return corsJson(request, 405, { error: "POST only." });
-  return corsJson(request, 200, { ok: true, skipped: true });
+  try {
+    const out = await fireDueDrops(env);
+    return corsJson(request, 200, { ok: true, ...out });
+  } catch (err) {
+    return corsJson(request, 500, { error: String(err && err.message || err) });
+  }
 }
 
 export async function dropStudioResponse(request, env) {

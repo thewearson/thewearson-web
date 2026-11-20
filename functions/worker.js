@@ -1,4 +1,4 @@
-import { dropNotifyResponse, inboxSignup, dropTickResponse, dropStudioResponse, authMailResponse } from "./_lib.js";
+import { dropNotifyResponse, inboxSignup, dropTickResponse, dropStudioResponse, authMailResponse, fireDueDrops } from "./_lib.js";
 
 export default {
   async fetch(request, env, ctx) {
@@ -26,5 +26,8 @@ export default {
     }
     if (env.ASSETS) return env.ASSETS.fetch(request);
     return new Response("Not found", { status: 404 });
+  },
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(fireDueDrops(env).catch((err) => console.log("drop-fire", err && err.message)));
   },
 };
