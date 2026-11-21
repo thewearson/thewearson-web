@@ -68,7 +68,8 @@ DECLARE
   pack text := lower(trim(p_pack));
   store text := lower(trim(coalesce(p_add_store, '')));
   sent text[] := '{}';
-  wave jsonb;
+  cur_wave jsonb;
+  next_wave jsonb;
 BEGIN
   IF coalesce(p_key, '') IS DISTINCT FROM 'wears-on-drop-fire-2026' THEN
     RAISE EXCEPTION 'bad key';
@@ -80,22 +81,23 @@ BEGIN
   VALUES (pack, '{}', false, NULL, now())
   ON CONFLICT (pack_id) DO NOTHING;
   SELECT coalesce(s.sent_store_ids, '{}'), s.wave
-  INTO sent, wave
+  INTO sent, cur_wave
   FROM public.drop_notify_state s
   WHERE s.pack_id = pack;
+  next_wave := cur_wave;
   IF store ~ '^[a-z0-9]{1,24}$' AND NOT (store = ANY (sent)) THEN
     sent := array_append(sent, store);
-    wave := NULL;
+    next_wave := NULL;
   ELSIF p_wave IS NOT NULL THEN
-    wave := p_wave;
+    next_wave := p_wave;
   END IF;
-  UPDATE public.drop_notify_state
+  UPDATE public.drop_notify_state AS s
   SET
     sent_store_ids = sent,
-    lock_done = coalesce(lock_done, false),
-    wave = wave,
+    lock_done = coalesce(s.lock_done, false),
+    wave = next_wave,
     updated_at = now()
-  WHERE pack_id = pack;
+  WHERE s.pack_id = pack;
   RETURN jsonb_build_object('ok', true, 'sent_store_ids', to_jsonb(sent));
 END;
 $$;

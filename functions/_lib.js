@@ -969,10 +969,8 @@ async function drainArmedStore(env, newsId, storeId) {
 }
 
 async function drainDueFromDb(env) {
-  if (await gmailAuthBlocked()) {
-    return { error: "Gmail auth failed. Use an App Password.", blocked: true };
-  }
   const out = [];
+  const blocked = await gmailAuthBlocked();
   for (const job of dueDropJobs(env)) {
     const at = Date.parse(job.at);
     if (!Number.isFinite(at) || Date.now() < at) continue;
@@ -984,6 +982,18 @@ async function drainDueFromDb(env) {
     const remain = job.storeIds.filter((id) => !page.sentStoreIds.includes(id));
     if (!remain.length) {
       out.push({ newsId: job.newsId, already: true, n: page.n, sentStoreIds: page.sentStoreIds });
+      continue;
+    }
+    if (packId(job.newsId, env) === AF1_NEWS_ID) {
+      let sentStoreIds = page.sentStoreIds;
+      for (const id of remain) {
+        sentStoreIds = await touchArmedState(env, job.newsId, { storeId: id });
+      }
+      out.push({ newsId: job.newsId, sealed: true, n: page.n, sentStoreIds });
+      continue;
+    }
+    if (blocked) {
+      out.push({ newsId: job.newsId, error: "Gmail auth failed. Use an App Password.", blocked: true });
       continue;
     }
     const waveId = String(page.wave?.storeId || "");
@@ -1203,6 +1213,15 @@ export async function sendDueDropMail(env, opt = {}) {
 
 export async function dropTickResponse(request, env) {
   if (request.method === "OPTIONS") return preflight(request);
+  if (request.method === "GET") {
+    const app = !!(await readSecret(env && env.GMAIL_APP_PASSWORD));
+    const typo = !!(await readSecret(env && env.GMAIL_APPPASSWORD));
+    return corsJson(request, 200, {
+      ok: true,
+      v: "web92",
+      gmail: { GMAIL_APP_PASSWORD: app, GMAIL_APPPASSWORD: typo },
+    });
+  }
   if (request.method !== "POST") return corsJson(request, 405, { error: "POST only." });
   let body = {};
   try { body = await request.json(); } catch { body = {}; }
