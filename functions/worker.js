@@ -19,7 +19,7 @@ export default {
       return dropTickResponse(request, env);
     }
     if (path === "/api/drop-studio") {
-      return dropStudioResponse(request, env);
+      return dropStudioResponse(request, env, ctx);
     }
     if (path === "/api/auth-mail") {
       return authMailResponse(request, env);

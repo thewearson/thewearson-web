@@ -1182,7 +1182,7 @@ export async function dropTickResponse(request, env) {
   }
 }
 
-export async function dropStudioResponse(request, env) {
+export async function dropStudioResponse(request, env, ctx) {
   if (request.method === "OPTIONS") return preflight(request);
   if (!(await studioAuthorized(request, env))) {
     return corsJson(request, 401, { error: "Studio auth failed." });
@@ -1216,19 +1216,34 @@ export async function dropStudioResponse(request, env) {
     ? body.storeIds.map((s) => String(s || "").trim()).filter(Boolean).slice(0, 6)
     : [];
   if (!storeIds.length) return corsJson(request, 400, { error: "storeIds required." });
-  try {
-    const extra = Array.isArray(body.emails) ? body.emails : [];
-    const out = await sendDueDropMail(env, {
-      studio: true,
-      storeIds,
-      again: body.again === true,
-      newsId,
-      emails: extra,
-      batch: body.batch === true,
-      cursor: body.cursor,
-      total: body.total,
+  const extra = Array.isArray(body.emails) ? body.emails : [];
+  const job = {
+    studio: true,
+    storeIds,
+    again: body.again === true,
+    newsId,
+    emails: extra,
+    batch: body.batch === true,
+    cursor: body.cursor,
+    total: body.total,
+    done: body.done === true,
+  };
+  const run = () => sendDueDropMail(env, job);
+  if (ctx && typeof ctx.waitUntil === "function" && extra.length) {
+    ctx.waitUntil(run().catch((err) => console.log("drop-studio", err && err.message)));
+    return corsJson(request, 200, {
+      ok: true,
+      queued: true,
       done: body.done === true,
+      sent: extra.length,
+      total: Number(body.total || extra.length),
+      remain: 0,
+      storeIds,
+      newsId,
     });
+  }
+  try {
+    const out = await run();
     const status = out.error ? 400 : 200;
     return corsJson(request, status, { ok: !out.error, ...out });
   } catch (err) {
