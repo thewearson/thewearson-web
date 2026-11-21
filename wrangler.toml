@@ -1,6 +1,7 @@
 name = "thewearson-web"
 compatibility_date = "2026-11-20"
 main = "functions/worker.js"
+keep_vars = true
 
 [assets]
 directory = "."

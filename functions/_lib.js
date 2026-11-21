@@ -86,6 +86,12 @@ async function readSecret(value) {
   return "";
 }
 
+async function gmailPass(env) {
+  const a = (await readSecret(env && env.GMAIL_APP_PASSWORD)).replace(/\s+/g, "");
+  if (a) return a;
+  return (await readSecret(env && env.GMAIL_APPPASSWORD)).replace(/\s+/g, "");
+}
+
 function b64utf8(s) {
   const bytes = new TextEncoder().encode(String(s || ""));
   let bin = "";
@@ -231,7 +237,7 @@ async function upsertEmail(env, email, off, newsId) {
 
 async function smtpDeliver(env, { recipients, subject, text, html, selfOnly, toEmail }) {
   const user = String(env.GMAIL_USER || "thewears.on@gmail.com").trim();
-  const pass = (await readSecret(env.GMAIL_APP_PASSWORD)).replace(/\s+/g, "");
+  const pass = await gmailPass(env);
   if (!pass) throw new Error("GMAIL_APP_PASSWORD missing");
   const toList = [...new Set((recipients || []).map(cleanEmail).filter(Boolean))];
   if (!selfOnly && !toList.length) return { ok: true, sent: 0 };
@@ -683,7 +689,7 @@ async function studioAuthorized(request, env) {
   if (!got) return false;
   const keys = [
     await readSecret(env.DROP_STUDIO_KEY),
-    await readSecret(env.GMAIL_APP_PASSWORD),
+    await gmailPass(env),
     fireKey(env),
   ].filter(Boolean);
   return keys.some((k) => sameSecret(got, k));
@@ -922,7 +928,7 @@ async function drainDueFromDb(env) {
 
 export async function fireDueDrops(env, body = {}) {
   const db = await drainDueFromDb(env).catch((err) => ({ error: String(err && err.message || err) }));
-  const token = (await readSecret(env.GMAIL_APP_PASSWORD))
+  const token = (await gmailPass(env))
     || (await readSecret(env.DROP_STUDIO_KEY))
     || fireKey(env);
   const init = {
