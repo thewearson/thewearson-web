@@ -479,8 +479,8 @@ function normalizeStores(list) {
     const url = hrefAbs(s?.url || s?.href || "");
     const label = String(s?.label || s?.name || s?.store || "").trim();
     if (!url || !label) continue;
-    const id = String(s?.id || storeId(label, url, `s${out.length + 1}`));
-    if (seen.has(id)) continue;
+    let id = String(s?.id || storeId(label, url, `s${out.length + 1}`));
+    if (seen.has(id)) id = `s${out.length + 1}`;
     seen.add(id);
     out.push({ id, label, url });
   }
@@ -575,53 +575,21 @@ async function loadLiveDrop(env, newsId) {
   const requestedRow = rows.find((r) => String(r.id).toLowerCase() === requested)
     || rows.find((r) => String(r.id).toLowerCase() === id)
     || rows[0];
-  if (af1) {
-    let stores = normalizeStores(AF1_STORES);
-    let at = AF1_AT;
-    let on = false;
-    const ordered = [...rows.filter((r) => r !== requestedRow), requestedRow];
-    for (const row of ordered) {
-      const json = parseDropJson(row.drop_json);
-      const packed = parseDropNote(row.buy_note);
-      if (json?.on !== false && !packed.off) on = true;
-      if (json?.at || packed.at) at = String(json?.at || packed.at);
-      const listed = json?.stores?.length ? json.stores : packed.stores;
-      stores = overlayStores(stores, listed, false);
-    }
-    return {
-      newsId: requested,
-      at,
-      title: String(requestedRow.title || requestedRow.product_name || fallback.title),
-      when: formatWhen(at),
-      stores,
-      on,
-    };
-  }
   const json = parseDropJson(requestedRow.drop_json);
   const packed = parseDropNote(requestedRow.buy_note);
   const listed = json?.stores?.length ? json.stores : packed.stores;
-  if (requested !== VICE_NEWS_ID) {
-    const stores = normalizeStores(listed).length
-      ? normalizeStores(listed)
-      : (requested === VANS_NEWS_ID ? normalizeStores(VANS_STORES) : []);
-    const at = String(json?.at || packed.at || "").trim();
-    return {
-      newsId: requested,
-      at,
-      title: String(requestedRow.product_name || requestedRow.title || ""),
-      when: formatWhen(at),
-      stores,
-      on: json?.on !== false && !packed.off,
-    };
-  }
-  const stores = overlayStores(VICE_STORES, listed, true);
+  const kit = af1 ? AF1_STORES : (id === VICE_NEWS_ID ? VICE_STORES : (requested === VANS_NEWS_ID ? VANS_STORES : []));
+  const saved = normalizeStores(listed);
+  const stores = saved.length ? saved : normalizeStores(kit);
+  const at = String(json?.at || packed.at || (af1 ? AF1_AT : fallback.at) || "").trim();
+  const on = json?.on !== false && !packed.off;
   return {
     newsId: requested,
-    at: String(json?.at || packed.at || fallback.at),
-    title: String(requestedRow.product_name || requestedRow.title || fallback.title),
-    when: formatWhen(json?.at || packed.at || fallback.at),
+    at,
+    title: String(requestedRow.title || requestedRow.product_name || fallback.title),
+    when: formatWhen(at),
     stores,
-    on: json?.on !== false && !packed.off,
+    on,
   };
 }
 

@@ -839,15 +839,19 @@
     return { at, stores, note: human.join("\n"), off };
   }
   function normalizeDropStores(list, fallback) {
-    const src = Array.isArray(list) && list.length ? list : fallback;
+    const src = Array.isArray(list) && list.length ? list : (fallback || []);
     const out = [];
+    const seen = new Set();
     for (const s of src.slice(0, 6)) {
       const url = hrefAbs(s?.url || s?.href || "");
       const label = String(s?.label || s?.name || s?.store || "").trim();
       if (!url || !label) continue;
-      out.push({ id: String(s.id || dropStoreId(label, url)), label, url });
+      let id = String(s?.id || dropStoreId(label, url) || `s${out.length + 1}`);
+      if (seen.has(id)) id = `s${out.length + 1}`;
+      seen.add(id);
+      out.push({ id, label, url });
     }
-    return out.length ? out : (fallback || []).slice();
+    return out;
   }
   function viceStores(list) {
     const overlay = {};
@@ -908,26 +912,15 @@
     const at = String(json?.at || pack.at || (af1 ? AF1_AT : vice ? VICE_AT : "")).trim();
     if (!at || Number.isNaN(Date.parse(at))) return null;
     const packedStores = json?.stores || pack.stores;
-    const stores = vice
-      ? viceStores(packedStores)
-      : af1
-        ? af1Stores(packedStores)
-        : vans
-          ? normalizeDropStores(packedStores, VANS_STORES)
-          : normalizeDropStores(packedStores, []);
+    const kit = vice ? VICE_STORES : af1 ? AF1_STORES : vans ? VANS_STORES : [];
+    const stores = normalizeDropStores(packedStores, kit);
     if (!stores.length) return null;
-    const buy = hrefAbs(row.buy_url || row.buyUrl);
-    if (buy && !af1) {
-      const id = dropStoreId("", buy);
-      const hit = stores.find((s) => s.id === id) || stores.find((s) => hrefAbs(s.url).replace(/\/+$/, "") === buy.replace(/\/+$/, ""));
-      if (hit) hit.url = buy;
-    }
     return {
       newsId: String(row.id || ""),
       at,
       title: String(json?.title || row.title || (af1 ? "GTA 6 × TRAVIS SCOTT - ONLY 600 PAIRS OF THE MULTICOLOR AF1" : vans ? "VANS OLD SKOOL 36 PEARLIZED “YACHT CLUB” IS OFFICIALLY HERE." : "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI")),
       stores,
-      defaultId: vice ? "nba" : af1 ? "snkrs" : vans ? "goat" : String(json?.defaultId || stores[0].id),
+      defaultId: String(json?.defaultId || stores[0].id),
       vice,
       af1,
     };
