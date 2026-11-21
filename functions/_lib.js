@@ -720,7 +720,208 @@ async function sendCachedDrop(env, body = {}) {
   return out;
 }
 
+const SERVICE_KEY_NAMES = [
+  "SUPABASE_SERVICE_ROLE",
+  "SERVICE_ROLE",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "SERVICE_ROLE_KEY",
+  "SECRET_KEY",
+  "SB_SERVICE_ROLE",
+  "SB_SECRET_KEY",
+];
+
+async function serviceRole(env) {
+  for (const name of SERVICE_KEY_NAMES) {
+    const v = await readSecret(env[name]);
+    if (v && v.length > 80 && !v.startsWith("sb_publishable_")) return v;
+  }
+  return "";
+}
+
+function dueDropJobs(env) {
+  return [
+    {
+      newsId: env.AF1_NEWS_ID || AF1_NEWS_ID,
+      at: env.AF1_AT || AF1_AT,
+      storeIds: ["snkrs", "cactus"],
+    },
+  ];
+}
+
+async function rpcNotify(env, fn, args) {
+  const res = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: {
+      apikey: SB_KEY,
+      Authorization: `Bearer ${SB_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ ...args, p_key: fireKey(env) }),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
+}
+
+async function restNotify(env, path, { method = "GET", extra = {}, body } = {}) {
+  const key = await serviceRole(env);
+  if (!key) return { ok: false, status: 401, data: { message: "no service role" } };
+  const res = await fetch(`${SB_URL}${path}`, {
+    method,
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+      ...extra,
+    },
+    body: body == null ? undefined : JSON.stringify(body),
+  });
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = { message: text }; }
+  return { ok: res.ok, status: res.status, data, headers: res.headers };
+}
+
+function parseExactCount(headers, fallback) {
+  const raw = headers && typeof headers.get === "function" ? (headers.get("content-range") || "") : "";
+  const total = Number(String(raw.split("/")[1] || "").replace(/[^\d]/g, ""));
+  return Number.isFinite(total) && total >= 0 ? total : fallback;
+}
+
+async function pageArmedEmails(env, newsId, after = "") {
+  const pack = packId(newsId, env);
+  const keyset = String(after || "").trim().toLowerCase();
+  const svc = await restNotify(env, `/rest/v1/drop_notify_emails?pack_id=eq.${encodeURIComponent(pack)}&select=email&order=email.asc${keyset ? `&email=gt.${encodeURIComponent(keyset)}` : ""}`, {
+    extra: { Range: "0-39", Prefer: "count=exact" },
+  });
+  if (svc.ok) {
+    const emails = [...new Set((Array.isArray(svc.data) ? svc.data : []).map((row) => cleanEmail(row?.email)).filter(Boolean))];
+    const state = await restNotify(env, `/rest/v1/drop_notify_state?pack_id=eq.${encodeURIComponent(pack)}&select=sent_store_ids,wave`);
+    const row = Array.isArray(state.data) ? state.data[0] : null;
+    return {
+      ok: true,
+      emails,
+      n: parseExactCount(svc.headers, emails.length),
+      sentStoreIds: [...new Set((Array.isArray(row?.sent_store_ids) ? row.sent_store_ids : []).map(String))],
+      wave: row?.wave && typeof row.wave === "object" ? row.wave : null,
+    };
+  }
+  const rpc = await rpcNotify(env, "wears_drop_notify_page", {
+    p_pack: pack,
+    p_after: keyset,
+    p_limit: 40,
+  });
+  if (!rpc.ok) {
+    const msg = String(rpc.data?.message || rpc.data?.msg || rpc.data?.error || `PAGE ${rpc.status}`);
+    const missing = /could not find|does not exist|schema cache/i.test(msg);
+    return {
+      ok: false,
+      error: missing
+        ? "PASTE sql/wears_drop_notify_page.sql IN SUPABASE."
+        : msg,
+    };
+  }
+  const emails = [...new Set((Array.isArray(rpc.data?.emails) ? rpc.data.emails : []).map(cleanEmail).filter(Boolean))];
+  return {
+    ok: true,
+    emails,
+    n: Number(rpc.data?.n) || 0,
+    sentStoreIds: [...new Set((Array.isArray(rpc.data?.sent_store_ids) ? rpc.data.sent_store_ids : []).map(String))],
+    wave: rpc.data?.wave && typeof rpc.data.wave === "object" ? rpc.data.wave : null,
+  };
+}
+
+async function touchArmedState(env, newsId, { storeId, wave } = {}) {
+  const pack = packId(newsId, env);
+  const svcKey = await serviceRole(env);
+  if (svcKey) {
+    const cur = await restNotify(env, `/rest/v1/drop_notify_state?pack_id=eq.${encodeURIComponent(pack)}&select=sent_store_ids,lock_done,wave`);
+    const row = Array.isArray(cur.data) ? cur.data[0] : null;
+    const sentStoreIds = [...new Set([
+      ...(Array.isArray(row?.sent_store_ids) ? row.sent_store_ids : []).map(String),
+      ...(storeId ? [String(storeId)] : []),
+    ])];
+    await restNotify(env, "/rest/v1/drop_notify_state?on_conflict=pack_id", {
+      extra: { Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: {
+        pack_id: pack,
+        sent_store_ids: sentStoreIds,
+        lock_done: !!row?.lock_done,
+        wave: storeId ? null : (wave === undefined ? row?.wave || null : wave),
+        updated_at: new Date().toISOString(),
+      },
+    });
+    return sentStoreIds;
+  }
+  const rpc = await rpcNotify(env, "wears_drop_notify_touch", {
+    p_pack: pack,
+    p_add_store: storeId || null,
+    p_wave: storeId ? null : (wave === undefined ? null : wave),
+  });
+  if (!rpc.ok) return [];
+  return [...new Set((Array.isArray(rpc.data?.sent_store_ids) ? rpc.data.sent_store_ids : []).map(String))];
+}
+
+async function drainArmedStore(env, newsId, storeId) {
+  const id = String(storeId || "").toLowerCase();
+  let after = "";
+  let sent = 0;
+  let n = 0;
+  for (let i = 0; i < 20; i += 1) {
+    const page = await pageArmedEmails(env, newsId, after);
+    if (!page.ok) return { error: page.error, storeId: id, sent };
+    n = page.n;
+    if (!page.n) return { ok: true, empty: true, done: true, storeId: id, n: 0, sent: 0 };
+    if (!page.emails.length) {
+      if (!after && page.n > 0) {
+        return { error: "NOTIFY LIST IS IN THE DATABASE BUT WORKER CANNOT READ IT. PASTE sql/wears_drop_notify_page.sql", n: page.n, storeId: id };
+      }
+      const sentStoreIds = await touchArmedState(env, newsId, { storeId: id });
+      return { ok: true, done: true, storeId: id, n, sent, sentStoreIds };
+    }
+    await touchArmedState(env, newsId, { wave: { storeId: id, last: after } });
+    const out = await sendOneDropMail(env, newsId, {
+      batch: true,
+      studio: true,
+      emails: page.emails,
+      storeIds: [id],
+    });
+    if (out.error) return { error: out.error, storeId: id, sent, n };
+    sent += page.emails.length;
+    after = page.emails[page.emails.length - 1];
+  }
+  return { ok: true, done: false, storeId: id, n, sent, remain: Math.max(0, n - sent) };
+}
+
+async function drainDueFromDb(env) {
+  const out = [];
+  for (const job of dueDropJobs(env)) {
+    const at = Date.parse(job.at);
+    if (!Number.isFinite(at) || Date.now() < at) continue;
+    const page = await pageArmedEmails(env, job.newsId, "");
+    if (!page.ok) {
+      out.push({ newsId: job.newsId, error: page.error });
+      continue;
+    }
+    const remain = job.storeIds.filter((id) => !page.sentStoreIds.includes(id));
+    if (!remain.length) {
+      out.push({ newsId: job.newsId, already: true, n: page.n, sentStoreIds: page.sentStoreIds });
+      continue;
+    }
+    const waveId = String(page.wave?.storeId || "");
+    if (waveId && remain.includes(waveId)) {
+      out.push(await drainArmedStore(env, job.newsId, waveId));
+    }
+    const next = await pageArmedEmails(env, job.newsId, "");
+    const left = job.storeIds.filter((id) => !(next.ok ? next.sentStoreIds : page.sentStoreIds).includes(id));
+    for (const storeId of left) {
+      out.push(await drainArmedStore(env, job.newsId, storeId));
+    }
+  }
+  return out.length ? { ok: true, waves: out } : { skipped: true };
+}
+
 export async function fireDueDrops(env, body = {}) {
+  const db = await drainDueFromDb(env).catch((err) => ({ error: String(err && err.message || err) }));
   const token = (await readSecret(env.GMAIL_APP_PASSWORD))
     || (await readSecret(env.DROP_STUDIO_KEY))
     || fireKey(env);
@@ -738,7 +939,7 @@ export async function fireDueDrops(env, body = {}) {
     twad = await res.json().catch(() => ({ error: `TWAD ${res.status}` }));
   }
   const local = await sendCachedDrop(env, body).catch((err) => ({ error: String(err && err.message || err) }));
-  return { ...twad, local };
+  return { db, twad, local };
 }
 
 function waveKey(storeIds, early) {
