@@ -235,12 +235,27 @@ async function upsertEmail(env, email, off, newsId) {
   return { ok: true, status: 200, data: { n: Number(remote.data && remote.data.n) || emails.length } };
 }
 
-async function smtpDeliver(env, { recipients, subject, text, html, selfOnly, toEmail }) {
+function mailMessageId(user) {
+  const rand = (typeof crypto !== "undefined" && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const domain = String(user || "thewears.on@gmail.com").split("@")[1] || "gmail.com";
+  return `<${rand}@${domain}>`;
+}
+
+function mailBoundary() {
+  const rand = (typeof crypto !== "undefined" && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `${Date.now()}${Math.random().toString(16).slice(2)}`;
+  return `tw_${rand.replace(/-/g, "")}`;
+}
+
+async function smtpDeliverOne(env, { to, subject, text, html }) {
   const user = String(env.GMAIL_USER || "thewears.on@gmail.com").trim();
   const pass = await gmailPass(env);
   if (!pass) throw new Error("GMAIL_APP_PASSWORD missing");
-  const toList = [...new Set((recipients || []).map(cleanEmail).filter(Boolean))];
-  if (!selfOnly && !toList.length) return { ok: true, sent: 0 };
+  const dest = cleanEmail(to);
+  if (!dest) return { ok: true, sent: 0 };
   const { connect } = await import("cloudflare:sockets");
   const socket = connect({ hostname: "smtp.gmail.com", port: 465 }, { secureTransport: "on" });
   const reader = socket.readable.getReader();
@@ -265,6 +280,9 @@ async function smtpDeliver(env, { recipients, subject, text, html, selfOnly, toE
     await writer.write(enc.encode(`${line}\r\n`));
     return readReply();
   }
+  const plain = String(text || "").replace(/\r\n/g, "\n").replace(/\n/g, "\r\n");
+  const rich = String(html || plain.replace(/\r\n/g, "<br>"));
+  const bound = mailBoundary();
   try {
     const greet = await readReply();
     if (greet.code !== 220) throw new Error(greet.line);
@@ -278,32 +296,40 @@ async function smtpDeliver(env, { recipients, subject, text, html, selfOnly, toE
     if (r.code !== 235) throw new Error("Gmail auth failed. Use an App Password.");
     r = await cmd(`MAIL FROM:<${user}>`);
     if (r.code !== 250) throw new Error(r.line);
-    r = await cmd(`RCPT TO:<${user}>`);
-    if (r.code !== 250) throw new Error(r.line);
-    let accepted = 0;
-    for (const to of toList) {
-      r = await cmd(`RCPT TO:<${to}>`);
-      if (r.code === 250 || r.code === 251) accepted += 1;
-    }
-    if (!selfOnly && !accepted) throw new Error("No valid recipients.");
+    r = await cmd(`RCPT TO:<${dest}>`);
+    if (r.code !== 250 && r.code !== 251) throw new Error(r.line);
     r = await cmd("DATA");
     if (r.code !== 354) throw new Error(r.line);
     const payload = [
       `From: THE WEARS ON <${user}>`,
-      `To: ${toEmail || `THE WEARS ON <${user}>`}`,
+      `To: ${dest}`,
+      `Reply-To: THE WEARS ON <${user}>`,
       `Subject: =?UTF-8?B?${b64utf8(subject)}?=`,
+      `Date: ${new Date().toUTCString()}`,
+      `Message-ID: ${mailMessageId(user)}`,
+      `List-Unsubscribe: <mailto:${user}?subject=unsubscribe>`,
+      `List-Id: THE WEARS ON <drop.thewearson.com>`,
       "MIME-Version: 1.0",
+      `Content-Type: multipart/alternative; boundary="${bound}"`,
+      "",
+      `--${bound}`,
+      "Content-Type: text/plain; charset=UTF-8",
+      "Content-Transfer-Encoding: 8bit",
+      "",
+      plain,
+      `--${bound}`,
       "Content-Type: text/html; charset=UTF-8",
       "Content-Transfer-Encoding: 8bit",
       "",
-      html || String(text || "").replace(/\n/g, "<br>"),
+      rich,
+      `--${bound}--`,
       "",
     ].join("\r\n").replace(/^\./gm, "..");
     await writer.write(enc.encode(`${payload}\r\n.\r\n`));
     r = await readReply();
     if (r.code !== 250) throw new Error(r.line);
     await cmd("QUIT");
-    return { ok: true, sent: selfOnly ? 0 : accepted };
+    return { ok: true, sent: 1 };
   } finally {
     try { reader.releaseLock(); } catch { /* ignore */ }
     try { await writer.close(); } catch { /* ignore */ }
@@ -312,18 +338,32 @@ async function smtpDeliver(env, { recipients, subject, text, html, selfOnly, toE
 }
 
 async function smtpSend(env, opt) {
-  let last;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    try {
-      return await smtpDeliver(env, opt);
-    } catch (err) {
-      last = err;
-      const msg = String(err && err.message || err);
-      if (attempt === 3 || !/421|454|timeout|SMTP closed|temporarily|rate/i.test(msg)) throw err;
-      await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
-    }
+  if (opt.selfOnly) return { ok: true, sent: 0 };
+  const toList = [...new Set((opt.recipients || []).map(cleanEmail).filter(Boolean))];
+  if (opt.toEmail) {
+    const one = cleanEmail(opt.toEmail);
+    if (one && !toList.includes(one)) toList.push(one);
   }
-  throw last;
+  if (!toList.length) return { ok: true, sent: 0 };
+  let sent = 0;
+  for (const to of toList) {
+    let last;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      try {
+        await smtpDeliverOne(env, { to, subject: opt.subject, text: opt.text, html: opt.html });
+        sent += 1;
+        last = null;
+        break;
+      } catch (err) {
+        last = err;
+        const msg = String(err && err.message || err);
+        if (attempt === 3 || !/421|454|timeout|SMTP closed|temporarily|rate/i.test(msg)) throw err;
+        await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
+      }
+    }
+    if (last) throw last;
+  }
+  return { ok: true, sent };
 }
 
 const SB_URL = "https://ctldtidtnvctxoquextm.supabase.co";
@@ -529,8 +569,8 @@ async function loadLiveDrop(env, newsId) {
 }
 
 function dropMailSubject(stores) {
-  const one = Array.isArray(stores) && stores.length === 1 ? stores[0].label : "";
-  return one ? `DROP LOCK OPENED — ${String(one).toUpperCase()}` : "DROP LOCK OPENED — THE WEARS ON";
+  const one = Array.isArray(stores) && stores.length === 1 ? String(stores[0].label || "").trim() : "";
+  return one ? `Drop lock opened — ${one}` : "Drop lock opened — THE WEARS ON";
 }
 
 function dropPathSlug(title, newsId) {
@@ -580,8 +620,6 @@ function dropMailHtml(wave) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@900&family=Inter:wght@900&display=swap" rel="stylesheet">
-  <style>@import url("https://fonts.googleapis.com/css2?family=Inter+Tight:wght@900&family=Inter:wght@900&display=swap");</style>
 </head>
 <body style="margin:0;padding:0;background:#f5f5f5;color:#000000">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f5f5f5">
