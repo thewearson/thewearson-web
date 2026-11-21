@@ -429,6 +429,23 @@ function storeId(label, url, fallback) {
   return fallback || String(label || "store").toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 18) || "store";
 }
 
+function storeAliases(id) {
+  const s = String(id || "").toLowerCase();
+  if (s === "snkrs" || s === "nike" || s === "goat") return ["snkrs", "nike", "goat"];
+  return s ? [s] : [];
+}
+
+function storeWanted(want, id) {
+  if (!want || !want.size) return true;
+  const idn = String(id || "").toLowerCase();
+  if (want.has(idn)) return true;
+  const aliases = new Set(storeAliases(idn));
+  for (const w of want) {
+    if (aliases.has(w) || storeAliases(w).includes(idn)) return true;
+  }
+  return false;
+}
+
 function parseDropJson(raw) {
   if (!raw) return null;
   if (typeof raw === "object" && !Array.isArray(raw)) return raw;
@@ -500,7 +517,10 @@ function overlayStores(base, list, extra) {
   const seen = new Set();
   for (const b of base) {
     const u = hrefAbs(b.url).replace(/\/+$/, "");
-    const hit = overlay[b.id] || (b.id === "snkrs" ? overlay.nike : null) || byUrl[u] || {};
+    const hit = overlay[b.id]
+      || (b.id === "snkrs" ? (overlay.nike || overlay.goat) : null)
+      || (b.id === "nike" ? (overlay.snkrs || overlay.goat) : null)
+      || byUrl[u] || {};
     out.push({ id: b.id, label: hit.label || b.label, url: hit.url || b.url });
     seen.add(b.id);
   }
@@ -561,10 +581,12 @@ async function loadLiveDrop(env, newsId) {
     let on = false;
     const ordered = [...rows.filter((r) => r !== requestedRow), requestedRow];
     for (const row of ordered) {
+      const json = parseDropJson(row.drop_json);
       const packed = parseDropNote(row.buy_note);
-      if (!packed.off) on = true;
-      if (packed.at) at = packed.at;
-      stores = overlayStores(stores, packed.stores, false);
+      if (json?.on !== false && !packed.off) on = true;
+      if (json?.at || packed.at) at = String(json?.at || packed.at);
+      const listed = json?.stores?.length ? json.stores : packed.stores;
+      stores = overlayStores(stores, listed, false);
     }
     return {
       newsId: requested,
@@ -1102,7 +1124,8 @@ async function sendOneDropMail(env, newsId, opt = {}) {
     const live = await loadLiveDrop(env, requested);
     const studioIds = (Array.isArray(opt.storeIds) ? opt.storeIds : []).map((s) => String(s || "").trim()).filter(Boolean);
     const want = new Set(studioIds);
-    const stores = (live.stores || []).filter((s) => want.has(s.id) && s.url);
+    let stores = (live.stores || []).filter((s) => storeWanted(want, s.id) && s.url);
+    if (!stores.length) stores = (live.stores || []).filter((s) => s.url).slice(0, 1);
     if (!stores.length) return { error: "No matching live store URLs. Save the dispatch first.", newsId: id };
     if (!emails.length) {
       return { sent: 0, empty: true, done: true, cursor: Number(opt.cursor || 0), total: Number(opt.total || 0), newsId: id };
@@ -1160,7 +1183,8 @@ async function sendOneDropMail(env, newsId, opt = {}) {
 
   if (studioIds.length) {
     const want = new Set(studioIds);
-    const stores = (live.stores || []).filter((s) => want.has(s.id) && s.url);
+    let stores = (live.stores || []).filter((s) => storeWanted(want, s.id) && s.url);
+    if (!stores.length) stores = (live.stores || []).filter((s) => s.url).slice(0, 1);
     if (!stores.length) return { error: "No matching live store URLs. Save the dispatch first.", newsId: id };
     const ids = stores.map((s) => s.id);
     if (!opt.again && ids.every((sid) => sentStoreIds.includes(sid))) {
