@@ -86,10 +86,38 @@ async function readSecret(value) {
   return "";
 }
 
+function cleanPass(raw) {
+  return String(raw || "")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .trim()
+    .replace(/^["']+|["']+$/g, "")
+    .replace(/\s+/g, "");
+}
+
 async function gmailPass(env) {
-  const a = (await readSecret(env && env.GMAIL_APP_PASSWORD)).replace(/\s+/g, "");
+  const a = cleanPass(await readSecret(env && env.GMAIL_APP_PASSWORD));
   if (a) return a;
-  return (await readSecret(env && env.GMAIL_APPPASSWORD)).replace(/\s+/g, "");
+  return cleanPass(await readSecret(env && env.GMAIL_APPPASSWORD));
+}
+
+const GMAIL_FAIL_REQ = new Request("https://thewearson.com/__gmail-auth-block");
+
+async function gmailAuthBlocked() {
+  try {
+    return !!(await caches.default.match(GMAIL_FAIL_REQ));
+  } catch {
+    return false;
+  }
+}
+
+async function markGmailAuthFailed() {
+  try {
+    await caches.default.put(GMAIL_FAIL_REQ, new Response("1", {
+      headers: { "Cache-Control": "max-age=600" },
+    }));
+  } catch {
+    /* ignore */
+  }
 }
 
 function b64utf8(s) {
@@ -321,7 +349,10 @@ async function smtpDeliverMany(env, { recipients, subject, text, html }) {
     r = await cmd(btoa(user));
     if (r.code !== 334) throw new Error(r.line);
     r = await cmd(btoa(pass));
-    if (r.code !== 235) throw new Error("Gmail auth failed. Use an App Password.");
+    if (r.code !== 235) {
+      await markGmailAuthFailed();
+      throw new Error("Gmail auth failed. Use an App Password.");
+    }
     let sent = 0;
     for (const dest of toList) {
       r = await cmd(`MAIL FROM:<${user}>`);
@@ -938,6 +969,9 @@ async function drainArmedStore(env, newsId, storeId) {
 }
 
 async function drainDueFromDb(env) {
+  if (await gmailAuthBlocked()) {
+    return { error: "Gmail auth failed. Use an App Password.", blocked: true };
+  }
   const out = [];
   for (const job of dueDropJobs(env)) {
     const at = Date.parse(job.at);
@@ -967,9 +1001,7 @@ async function drainDueFromDb(env) {
 
 export async function fireDueDrops(env, body = {}) {
   const db = await drainDueFromDb(env).catch((err) => ({ error: String(err && err.message || err) }));
-  const token = (await gmailPass(env))
-    || (await readSecret(env.DROP_STUDIO_KEY))
-    || fireKey(env);
+  const token = fireKey(env);
   const init = {
     method: "POST",
     headers: {
