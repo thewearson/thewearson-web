@@ -250,12 +250,43 @@ function mailBoundary() {
   return `tw_${rand.replace(/-/g, "")}`;
 }
 
-async function smtpDeliverOne(env, { to, subject, text, html }) {
+function mailPayload({ user, to, subject, text, html }) {
+  const plain = String(text || "").replace(/\r\n/g, "\n").replace(/\n/g, "\r\n");
+  const rich = String(html || plain.replace(/\r\n/g, "<br>"));
+  const bound = mailBoundary();
+  return [
+    `From: THE WEARS ON <${user}>`,
+    `To: ${to}`,
+    `Reply-To: THE WEARS ON <${user}>`,
+    `Subject: =?UTF-8?B?${b64utf8(subject)}?=`,
+    `Date: ${new Date().toUTCString()}`,
+    `Message-ID: ${mailMessageId(user)}`,
+    `List-Unsubscribe: <mailto:${user}?subject=unsubscribe>`,
+    `List-Id: THE WEARS ON <drop.thewearson.com>`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary="${bound}"`,
+    "",
+    `--${bound}`,
+    "Content-Type: text/plain; charset=UTF-8",
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    plain,
+    `--${bound}`,
+    "Content-Type: text/html; charset=UTF-8",
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    rich,
+    `--${bound}--`,
+    "",
+  ].join("\r\n").replace(/^\./gm, "..");
+}
+
+async function smtpDeliverMany(env, { recipients, subject, text, html }) {
   const user = String(env.GMAIL_USER || "thewears.on@gmail.com").trim();
   const pass = await gmailPass(env);
   if (!pass) throw new Error("GMAIL_APP_PASSWORD missing");
-  const dest = cleanEmail(to);
-  if (!dest) return { ok: true, sent: 0 };
+  const toList = [...new Set((recipients || []).map(cleanEmail).filter(Boolean))];
+  if (!toList.length) return { ok: true, sent: 0 };
   const { connect } = await import("cloudflare:sockets");
   const socket = connect({ hostname: "smtp.gmail.com", port: 465 }, { secureTransport: "on" });
   const reader = socket.readable.getReader();
@@ -280,9 +311,6 @@ async function smtpDeliverOne(env, { to, subject, text, html }) {
     await writer.write(enc.encode(`${line}\r\n`));
     return readReply();
   }
-  const plain = String(text || "").replace(/\r\n/g, "\n").replace(/\n/g, "\r\n");
-  const rich = String(html || plain.replace(/\r\n/g, "<br>"));
-  const bound = mailBoundary();
   try {
     const greet = await readReply();
     if (greet.code !== 220) throw new Error(greet.line);
@@ -294,42 +322,22 @@ async function smtpDeliverOne(env, { to, subject, text, html }) {
     if (r.code !== 334) throw new Error(r.line);
     r = await cmd(btoa(pass));
     if (r.code !== 235) throw new Error("Gmail auth failed. Use an App Password.");
-    r = await cmd(`MAIL FROM:<${user}>`);
-    if (r.code !== 250) throw new Error(r.line);
-    r = await cmd(`RCPT TO:<${dest}>`);
-    if (r.code !== 250 && r.code !== 251) throw new Error(r.line);
-    r = await cmd("DATA");
-    if (r.code !== 354) throw new Error(r.line);
-    const payload = [
-      `From: THE WEARS ON <${user}>`,
-      `To: ${dest}`,
-      `Reply-To: THE WEARS ON <${user}>`,
-      `Subject: =?UTF-8?B?${b64utf8(subject)}?=`,
-      `Date: ${new Date().toUTCString()}`,
-      `Message-ID: ${mailMessageId(user)}`,
-      `List-Unsubscribe: <mailto:${user}?subject=unsubscribe>`,
-      `List-Id: THE WEARS ON <drop.thewearson.com>`,
-      "MIME-Version: 1.0",
-      `Content-Type: multipart/alternative; boundary="${bound}"`,
-      "",
-      `--${bound}`,
-      "Content-Type: text/plain; charset=UTF-8",
-      "Content-Transfer-Encoding: 8bit",
-      "",
-      plain,
-      `--${bound}`,
-      "Content-Type: text/html; charset=UTF-8",
-      "Content-Transfer-Encoding: 8bit",
-      "",
-      rich,
-      `--${bound}--`,
-      "",
-    ].join("\r\n").replace(/^\./gm, "..");
-    await writer.write(enc.encode(`${payload}\r\n.\r\n`));
-    r = await readReply();
-    if (r.code !== 250) throw new Error(r.line);
+    let sent = 0;
+    for (const dest of toList) {
+      r = await cmd(`MAIL FROM:<${user}>`);
+      if (r.code !== 250) throw new Error(r.line);
+      r = await cmd(`RCPT TO:<${dest}>`);
+      if (r.code !== 250 && r.code !== 251) continue;
+      r = await cmd("DATA");
+      if (r.code !== 354) throw new Error(r.line);
+      await writer.write(enc.encode(`${mailPayload({ user, to: dest, subject, text, html })}\r\n.\r\n`));
+      r = await readReply();
+      if (r.code !== 250) throw new Error(r.line);
+      sent += 1;
+    }
+    if (!sent) throw new Error("No valid recipients.");
     await cmd("QUIT");
-    return { ok: true, sent: 1 };
+    return { ok: true, sent };
   } finally {
     try { reader.releaseLock(); } catch { /* ignore */ }
     try { await writer.close(); } catch { /* ignore */ }
@@ -345,25 +353,18 @@ async function smtpSend(env, opt) {
     if (one && !toList.includes(one)) toList.push(one);
   }
   if (!toList.length) return { ok: true, sent: 0 };
-  let sent = 0;
-  for (const to of toList) {
-    let last;
-    for (let attempt = 0; attempt < 4; attempt += 1) {
-      try {
-        await smtpDeliverOne(env, { to, subject: opt.subject, text: opt.text, html: opt.html });
-        sent += 1;
-        last = null;
-        break;
-      } catch (err) {
-        last = err;
-        const msg = String(err && err.message || err);
-        if (attempt === 3 || !/421|454|timeout|SMTP closed|temporarily|rate/i.test(msg)) throw err;
-        await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
-      }
+  let last;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      return await smtpDeliverMany(env, { recipients: toList, subject: opt.subject, text: opt.text, html: opt.html });
+    } catch (err) {
+      last = err;
+      const msg = String(err && err.message || err);
+      if (attempt === 3 || !/421|454|timeout|SMTP closed|temporarily|rate/i.test(msg)) throw err;
+      await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
     }
-    if (last) throw last;
   }
-  return { ok: true, sent };
+  throw last;
 }
 
 const SB_URL = "https://ctldtidtnvctxoquextm.supabase.co";
