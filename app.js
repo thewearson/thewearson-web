@@ -772,9 +772,18 @@
   let dropPingQueued = false;
 
   function hrefAbs(raw) {
-    const s = String(raw || "").trim();
+    let s = String(raw || "").trim().replace(/^['"]+|['"]+$/g, "");
     if (!s) return "";
-    return /^https?:\/\//i.test(s) ? s : `https://${s.replace(/^\/+/, "")}`;
+    if (!/^https?:\/\//i.test(s)) s = `https://${s.replace(/^\/+/, "")}`;
+    let u;
+    try { u = new URL(s); } catch { return s; }
+    if (!/(^|\.)goat\.com$/i.test(u.hostname)) return u.href;
+    u.protocol = "https:";
+    u.hostname = "www.goat.com";
+    const path = u.pathname.replace(/\/+$/, "");
+    const product = path.match(/^(?:\/[a-z]{2}(?:-[a-z]{2})?)?\/product\/([^/]+)$/i);
+    if (product) u.pathname = `/sneakers/${product[1]}`;
+    return u.toString();
   }
   function dropStoreId(label, url) {
     const s = `${label} ${url}`.toLowerCase();
@@ -1050,7 +1059,7 @@
         <p class="drop-picks-lab">${t("dropDefault")}</p>
         <div class="drop-chips">${drop.stores.map((s) => `<button class="drop-chip ${prefs.store === s.id ? "is-on" : ""}" type="button" data-drop-pick="${esc(s.id)}">${esc(s.label)}</button>`).join("")}</div>
       </div>
-      <div class="drop-buys">${drop.stores.map((s) => `<a class="drop-buy ${prefs.store === s.id ? "is-on" : ""}" href="${esc(s.url)}" target="_blank" rel="noopener" data-visit data-drop-pick="${esc(s.id)}">${esc(s.label)}</a>`).join("")}</div>
+      <div class="drop-buys">${drop.stores.map((s) => `<a class="drop-buy ${prefs.store === s.id ? "is-on" : ""}" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer" data-visit data-drop-pick="${esc(s.id)}">${esc(s.label)}</a>`).join("")}</div>
       ${parts.live ? "" : `<div class="drop-acts">
         <button class="drop-act ${prefs.notify ? "is-on" : ""}" type="button" data-drop-mail>${prefs.notify ? t("dropMailOn") : t("dropMail")}</button>
       </div>`}

@@ -411,11 +411,20 @@ function escHtml(s) {
 }
 
 function hrefAbs(raw) {
-  const s = String(raw || "").trim();
+  let s = String(raw || "").trim().replace(/^['"]+|['"]+$/g, "");
   if (!s) return "";
-  const url = /^https?:\/\//i.test(s) ? s : `https://${s.replace(/^\/+/, "")}`;
-  if (!/^https?:\/\//i.test(url)) return "";
-  return url.replace(/"/g, "%22");
+  if (!/^https?:\/\//i.test(s)) s = `https://${s.replace(/^\/+/, "")}`;
+  let u;
+  try { u = new URL(s); } catch { return s.replace(/"/g, "%22"); }
+  if (/(^|\.)goat\.com$/i.test(u.hostname)) {
+    u.protocol = "https:";
+    u.hostname = "www.goat.com";
+    const path = u.pathname.replace(/\/+$/, "");
+    const product = path.match(/^(?:\/[a-z]{2}(?:-[a-z]{2})?)?\/product\/([^/]+)$/i);
+    if (product) u.pathname = `/sneakers/${product[1]}`;
+    return u.toString();
+  }
+  return u.href.replace(/"/g, "%22");
 }
 
 function storeId(label, url, fallback) {
