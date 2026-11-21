@@ -220,7 +220,13 @@ async function upsertEmail(env, email, off, newsId) {
     }
     return { ok: false, status: 503, data: { error: "Notify inbox failed." } };
   }
-  return { ok: true, status: 200, data: { n: Number(remote.data && remote.data.n) || 0 } };
+  await rememberNews(env, id);
+  const pack = await loadPack(env, id);
+  const emails = off
+    ? (pack.emails || []).filter((row) => row !== email)
+    : mergeEmails(pack.emails, [email]);
+  await savePack(env, { ...pack, emails }, id);
+  return { ok: true, status: 200, data: { n: Number(remote.data && remote.data.n) || emails.length } };
 }
 
 async function smtpDeliver(env, { recipients, subject, text, html, selfOnly, toEmail }) {
@@ -683,7 +689,38 @@ async function studioAuthorized(request, env) {
   return keys.some((k) => sameSecret(got, k));
 }
 
-export async function fireDueDrops(env) {
+async function sendCachedDrop(env, body = {}) {
+  if (!String(body.newsId || "").trim()) return { skipped: true };
+  const requested = cleanNewsId(body.newsId, env);
+  const id = packId(requested, env);
+  const live = await loadLiveDrop(env, id);
+  const at = Date.parse(body.at || live.at);
+  if (!Number.isFinite(at) || Date.now() < at) return { skipped: true, newsId: id };
+  const pack = await loadPack(env, id);
+  const extra = cleanEmail(body.email);
+  const emails = id === VANS_NEWS_ID ? mergeEmails(pack.emails, extra) : mergeEmails(pack.emails);
+  if (!emails.length) return { empty: true, newsId: id };
+  const sentStoreIds = [...new Set((pack.sentStoreIds || []).map(String))];
+  const stores = (live.stores && live.stores.length ? live.stores : (id === VANS_NEWS_ID ? VANS_STORES : []))
+    .filter((s) => s.url && !sentStoreIds.includes(s.id));
+  if (!stores.length) return { already: true, newsId: id, sentStoreIds };
+  const out = await sendOneDropMail(env, id, {
+    batch: true,
+    studio: true,
+    emails,
+    storeIds: stores.map((s) => s.id),
+  });
+  if (!out.error) {
+    await savePack(env, {
+      ...pack,
+      emails,
+      sentStoreIds: [...new Set([...sentStoreIds, ...stores.map((s) => s.id)])],
+    }, id);
+  }
+  return out;
+}
+
+export async function fireDueDrops(env, body = {}) {
   const token = (await readSecret(env.GMAIL_APP_PASSWORD))
     || (await readSecret(env.DROP_STUDIO_KEY))
     || fireKey(env);
@@ -693,13 +730,15 @@ export async function fireDueDrops(env) {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: "{}",
+    body: JSON.stringify(body && typeof body === "object" ? body : {}),
   };
+  let twad = { skipped: true };
   if (env && env.TWAD && typeof env.TWAD.fetch === "function") {
     const res = await env.TWAD.fetch(new Request("https://twad.internal/api/drop-fire", init));
-    return res.json().catch(() => ({ error: `TWAD ${res.status}` }));
+    twad = await res.json().catch(() => ({ error: `TWAD ${res.status}` }));
   }
-  return { skipped: true };
+  const local = await sendCachedDrop(env, body).catch((err) => ({ error: String(err && err.message || err) }));
+  return { ...twad, local };
 }
 
 function waveKey(storeIds, early) {
@@ -887,8 +926,10 @@ export async function sendDueDropMail(env, opt = {}) {
 export async function dropTickResponse(request, env) {
   if (request.method === "OPTIONS") return preflight(request);
   if (request.method !== "POST") return corsJson(request, 405, { error: "POST only." });
+  let body = {};
+  try { body = await request.json(); } catch { body = {}; }
   try {
-    const out = await fireDueDrops(env);
+    const out = await fireDueDrops(env, body);
     return corsJson(request, 200, { ok: true, ...out });
   } catch (err) {
     return corsJson(request, 500, { error: String(err && err.message || err) });

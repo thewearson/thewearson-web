@@ -800,6 +800,15 @@
   function looksVans(row) {
     return String(row?.id || "").toLowerCase() === VANS_NEWS_ID;
   }
+  function vansClockAt() {
+    const key = "tw.drop.test.vans.at";
+    let at = dropLs(key);
+    if (!at || Number.isNaN(Date.parse(at))) {
+      at = new Date(Date.now() + 120000).toISOString().replace(/\.\d{3}Z$/, "Z");
+      dropLs(key, at);
+    }
+    return at;
+  }
   function parseDropJson(raw) {
     if (!raw) return null;
     if (typeof raw === "object" && !Array.isArray(raw)) return raw;
@@ -894,7 +903,7 @@
     const vice = looksViceCity(row);
     const af1 = looksAf1(row);
     const vans = looksVans(row);
-    const on = json?.on === true || pack.stores.length >= 2 || vice || af1 || vans;
+    const on = json?.on === true || pack.stores.length >= 2 || vice || af1 || (vans && !!(json?.at || pack.at));
     if (!on) return null;
     const at = String(json?.at || pack.at || (af1 ? AF1_AT : vice ? VICE_AT : "")).trim();
     if (!at || Number.isNaN(Date.parse(at))) return null;
@@ -1100,11 +1109,17 @@
   }
   let dropMailDrain = 0;
   function pingDropMailFire(extra) {
+    const drop = extra?.newsId ? dropById(extra.newsId) : null;
     fetch(DROP_TICK_API, {
       method: "POST",
       keepalive: true,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ live: true, ...(extra || {}) }),
+      body: JSON.stringify({
+        live: true,
+        email: accountEmail() || dropLs("tw.drop.email"),
+        at: drop?.at || extra?.at,
+        ...(extra || {}),
+      }),
     }).catch(() => {});
   }
   function drainDropMail() {
@@ -3344,6 +3359,18 @@
   function newsPage(id) {
     const n = findNews(id);
     if (!n) return `<p class="empty">${t("none")}</p>`;
+    if (looksVans(n)) {
+      const at = vansClockAt();
+      n.drop = {
+        newsId: n.id,
+        at,
+        title: n.title,
+        stores: VANS_STORES.map((s) => ({ ...s })),
+        defaultId: "goat",
+        vice: false,
+        af1: false,
+      };
+    }
     const dek = (n.dek || "").trim();
     const body = (n.body || "").trim();
     const buy = n.buyUrl;
