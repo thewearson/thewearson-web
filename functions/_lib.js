@@ -13,6 +13,10 @@ const AF1_STORES = [
   { id: "snkrs", label: "Nike SNKRS", url: "https://www.nike.com/launch" },
   { id: "cactus", label: "Cactus Jack", url: "https://shop.travisscott.com" },
 ];
+const VANS_NEWS_ID = "7768da16-8167-4ea3-ba32-6dd13f884f47";
+const VANS_STORES = [
+  { id: "goat", label: "GOAT", url: "https://www.goat.com/product/vans-lx-old-skool-36-pack-yacht-club-multi-color-vn000e8vbgk" },
+];
 
 const CACHE_REQ = new Request("https://thewearson.com/__drop-notify-inbox");
 const INDEX_REQ = new Request("https://thewearson.com/__drop-notify-index");
@@ -330,6 +334,7 @@ function hrefAbs(raw) {
 function storeId(label, url, fallback) {
   const s = `${label} ${url}`.toLowerCase();
   if (fallback === "snkrs" && /snkrs|nike/.test(s)) return "snkrs";
+  if (/goat/.test(s)) return "goat";
   if (/nike|snkrs/.test(s)) return "nike";
   if (/fanatics/.test(s)) return "fanatics";
   if (/nba/.test(s)) return "nba";
@@ -429,7 +434,7 @@ async function fetchNewsRows(env, ids) {
   const sb = String(env.SUPABASE_URL || env.WEARS_SUPABASE_URL || SB_URL).replace(/\/$/, "");
   const key = env.SUPABASE_ANON_KEY || env.WEARS_SUPABASE_ANON_KEY || SB_KEY;
   try {
-    const res = await fetch(`${sb}/rest/v1/drip_news?id=in.(${unique.join(",")})&select=id,title,product_name,buy_note,buy_url`, {
+    const res = await fetch(`${sb}/rest/v1/drip_news?id=in.(${unique.join(",")})&select=id,title,product_name,buy_note,buy_url,drop_json`, {
       headers: { apikey: key, Authorization: `Bearer ${key}` },
     });
     const rows = await res.json().catch(() => []);
@@ -483,18 +488,31 @@ async function loadLiveDrop(env, newsId) {
       on,
     };
   }
+  const json = parseDropJson(requestedRow.drop_json);
   const packed = parseDropNote(requestedRow.buy_note);
-  const listed = packed.stores.length ? packed.stores : [];
-  const stores = requested === VICE_NEWS_ID
-    ? overlayStores(VICE_STORES, listed, true)
-    : (normalizeStores(listed).length ? normalizeStores(listed) : fallback.stores);
+  const listed = json?.stores?.length ? json.stores : packed.stores;
+  if (requested !== VICE_NEWS_ID) {
+    const stores = normalizeStores(listed).length
+      ? normalizeStores(listed)
+      : (requested === VANS_NEWS_ID ? normalizeStores(VANS_STORES) : []);
+    const at = String(json?.at || packed.at || "").trim();
+    return {
+      newsId: requested,
+      at,
+      title: String(requestedRow.product_name || requestedRow.title || ""),
+      when: formatWhen(at),
+      stores,
+      on: json?.on !== false && !packed.off,
+    };
+  }
+  const stores = overlayStores(VICE_STORES, listed, true);
   return {
     newsId: requested,
-    at: String(packed.at || fallback.at),
+    at: String(json?.at || packed.at || fallback.at),
     title: String(requestedRow.product_name || requestedRow.title || fallback.title),
-    when: formatWhen(packed.at || fallback.at),
+    when: formatWhen(json?.at || packed.at || fallback.at),
     stores,
-    on: !packed.off,
+    on: json?.on !== false && !packed.off,
   };
 }
 

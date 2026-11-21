@@ -762,6 +762,10 @@
     { id: "snkrs", label: "Nike SNKRS", url: "https://www.nike.com/launch" },
     { id: "cactus", label: "Cactus Jack", url: "https://shop.travisscott.com" },
   ];
+  const VANS_NEWS_ID = "7768da16-8167-4ea3-ba32-6dd13f884f47";
+  const VANS_STORES = [
+    { id: "goat", label: "GOAT", url: "https://www.goat.com/product/vans-lx-old-skool-36-pack-yacht-club-multi-color-vn000e8vbgk" },
+  ];
   let dropTimer = 0;
   let dropTick = 0;
   let dropWatchBound = false;
@@ -774,6 +778,7 @@
   }
   function dropStoreId(label, url) {
     const s = `${label} ${url}`.toLowerCase();
+    if (/goat/.test(s)) return "goat";
     if (/nike|snkrs/.test(s)) return "nike";
     if (/fanatics/.test(s)) return "fanatics";
     if (/nba/.test(s)) return "nba";
@@ -791,6 +796,9 @@
     const title = String(row?.title || "").toUpperCase();
     if (!title || title.includes("MIAMI HEAT")) return false;
     return title.includes("GTA 6") && title.includes("TRAVIS SCOTT");
+  }
+  function looksVans(row) {
+    return String(row?.id || "").toLowerCase() === VANS_NEWS_ID;
   }
   function parseDropJson(raw) {
     if (!raw) return null;
@@ -885,12 +893,19 @@
     if (pack.off) return null;
     const vice = looksViceCity(row);
     const af1 = looksAf1(row);
-    const on = json?.on === true || pack.stores.length >= 2 || vice || af1;
+    const vans = looksVans(row);
+    const on = json?.on === true || pack.stores.length >= 2 || vice || af1 || vans;
     if (!on) return null;
     const at = String(json?.at || pack.at || (af1 ? AF1_AT : vice ? VICE_AT : "")).trim();
     if (!at || Number.isNaN(Date.parse(at))) return null;
     const packedStores = json?.stores || pack.stores;
-    const stores = vice ? viceStores(packedStores) : af1 ? af1Stores(packedStores) : normalizeDropStores(packedStores, []);
+    const stores = vice
+      ? viceStores(packedStores)
+      : af1
+        ? af1Stores(packedStores)
+        : vans
+          ? normalizeDropStores(packedStores, VANS_STORES)
+          : normalizeDropStores(packedStores, []);
     if (!stores.length) return null;
     const buy = hrefAbs(row.buy_url || row.buyUrl);
     if (buy && !af1) {
@@ -901,9 +916,9 @@
     return {
       newsId: String(row.id || ""),
       at,
-      title: String(json?.title || row.title || (af1 ? "GTA 6 × TRAVIS SCOTT - ONLY 600 PAIRS OF THE MULTICOLOR AF1" : "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI")),
+      title: String(json?.title || row.title || (af1 ? "GTA 6 × TRAVIS SCOTT - ONLY 600 PAIRS OF THE MULTICOLOR AF1" : vans ? "VANS OLD SKOOL 36 PEARLIZED “YACHT CLUB” IS OFFICIALLY HERE." : "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI")),
       stores,
-      defaultId: vice ? "nba" : af1 ? "snkrs" : String(json?.defaultId || stores[0].id),
+      defaultId: vice ? "nba" : af1 ? "snkrs" : vans ? "goat" : String(json?.defaultId || stores[0].id),
       vice,
       af1,
     };
