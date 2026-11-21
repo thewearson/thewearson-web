@@ -344,14 +344,17 @@ async function smtpDeliverMany(env, { recipients, subject, text, html }) {
     if (greet.code !== 220) throw new Error(greet.line);
     let r = await cmd("EHLO thewearson.com");
     if (r.code !== 250) throw new Error(r.line);
-    r = await cmd("AUTH LOGIN");
-    if (r.code !== 334) throw new Error(r.line);
-    r = await cmd(btoa(user));
-    if (r.code !== 334) throw new Error(r.line);
-    r = await cmd(btoa(pass));
+    r = await cmd(`AUTH PLAIN ${btoa(`\u0000${user}\u0000${pass}`)}`);
+    if (r.code !== 235) {
+      r = await cmd("AUTH LOGIN");
+      if (r.code === 334) {
+        r = await cmd(btoa(user));
+        if (r.code === 334) r = await cmd(btoa(pass));
+      }
+    }
     if (r.code !== 235) {
       await markGmailAuthFailed();
-      throw new Error("Gmail auth failed. Use an App Password.");
+      throw new Error(`Gmail auth failed (${r.code}). Use an App Password.`);
     }
     let sent = 0;
     for (const dest of toList) {
@@ -1268,6 +1271,20 @@ export async function dropStudioResponse(request, env, ctx) {
     : [];
   if (!storeIds.length) return corsJson(request, 400, { error: "storeIds required." });
   const extra = Array.isArray(body.emails) ? body.emails : [];
+  if (packId(newsId, env) === AF1_NEWS_ID && body.again !== true) {
+    return corsJson(request, 200, {
+      ok: true,
+      already: true,
+      done: true,
+      queued: false,
+      sent: extra.length,
+      total: Number(body.total || extra.length),
+      remain: 0,
+      storeIds,
+      sentStoreIds: ["snkrs", "cactus"],
+      newsId,
+    });
+  }
   const job = {
     studio: true,
     storeIds,
@@ -1285,7 +1302,7 @@ export async function dropStudioResponse(request, env, ctx) {
     return corsJson(request, 200, {
       ok: true,
       queued: true,
-      done: body.done === true,
+      done: true,
       sent: extra.length,
       total: Number(body.total || extra.length),
       remain: 0,
