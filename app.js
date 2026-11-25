@@ -4,7 +4,7 @@
   const GOOGLE_WEB = "774448618794-tgp8r4biip47li8771pjorfi2vjbv848.apps.googleusercontent.com";
   const DROP_HOST = /thewearson\.com$/i.test(location.hostname) ? "" : "https://thewearson.com";
   const DROP_NOTIFY_API = `${DROP_HOST}/api/drop-notify`;
-  const DROP_TICK_API = `${DROP_HOST}/api/drop-tick`;
+  const CATALOG_KEY = "tw.catalog.v1";
 
   const svg = (d) => `<svg viewBox="0 0 24 24"><path d="${d}"/></svg>`;
   const I = {
@@ -469,11 +469,11 @@
     if (!key) return null;
     return (state.fits || []).find((f) => f.id === key) || (state.fits || []).find((f) => fitSlug(f) === key) || null;
   }
-  function hrefNews(n) { return `#/n/${newsSlug(n)}`; }
-  function hrefStar(name) { return `#/s/${slugOf(name) || "star"}`; }
-  function hrefPiece(p) { return `#/p/${pieceSlug(p)}`; }
-  function hrefFit(f) { return `#/f/${fitSlug(f)}`; }
-  function hrefBrand(brand) { return `#/b/${slugOf(brand) || "brand"}`; }
+  function hrefNews(n) { return `/n/${newsSlug(n)}`; }
+  function hrefStar(name) { return `/s/${slugOf(name) || "star"}`; }
+  function hrefPiece(p) { return `/p/${pieceSlug(p)}`; }
+  function hrefFit(f) { return `/f/${fitSlug(f)}`; }
+  function hrefBrand(brand) { return `/b/${slugOf(brand) || "brand"}`; }
 
   function nickOf(raw) {
     let s = String(raw || "").trim().toUpperCase();
@@ -1109,34 +1109,8 @@
       </div>`;
     document.body.appendChild(el);
   }
-  let dropMailDrain = 0;
-  function pingDropMailFire(extra) {
-    const drop = extra?.newsId ? dropById(extra.newsId) : null;
-    fetch(DROP_TICK_API, {
-      method: "POST",
-      keepalive: true,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        live: true,
-        email: accountEmail() || dropLs("tw.drop.email"),
-        at: drop?.at || extra?.at,
-        ...(extra || {}),
-      }),
-    }).catch(() => {});
-  }
-  function drainDropMail() {
-    if (dropMailDrain) return;
-    pingDropMailFire();
-    dropMailDrain = window.setInterval(() => pingDropMailFire(), 8000);
-    window.setTimeout(() => {
-      window.clearInterval(dropMailDrain);
-      dropMailDrain = 0;
-    }, 8000 * 24);
-  }
   function fireDrop(drop, opt = {}) {
     if (!drop) return;
-    pingDropMailFire({ newsId: drop.newsId });
-    drainDropMail();
     const prefs = dropPrefs(drop);
     if (dropWasFired(drop) && !opt.force) return;
     markDropFired(drop);
@@ -1165,7 +1139,6 @@
     if (!drop) return;
     const ms = dropRemain(drop.at);
     if (ms <= 0) {
-      pingDropMailFire({ newsId: drop.newsId });
       const prefs = dropPrefs(drop);
       if (!dropWasFired(drop) && (prefs.notify || prefs.auto || hash().path === "n")) {
         fireDrop(drop, { toast: prefs.notify || hash().path === "n" });
@@ -1790,12 +1763,12 @@
   function memberHref(id, nick) {
     const n = nickOf(nick);
     const slug = n && n !== "MEMBER" ? n : String(id || n || "");
-    return `#/u/${encodeURIComponent(slug)}`;
+    return `/u/${encodeURIComponent(slug)}`;
   }
   function openMember(id, nick, extra = {}) {
     hideSheet();
     hideDlg();
-    if (isSelfMember(id, nick)) { go("#/account"); return; }
+    if (isSelfMember(id, nick)) { go("/account"); return; }
     const hint = {
       id: String(id || ""),
       nick: nickOf(nick),
@@ -1822,7 +1795,7 @@
       }
     }
     const href = memberHref(id, nick);
-    if (href === "#/u/") return;
+    if (href === "/u/") return;
     go(href);
   }
   function mapPerson(row) {
@@ -1940,6 +1913,33 @@
     return memberLoads[token];
   }
 
+  function hydrateCatalogCache() {
+    try {
+      const pack = JSON.parse(localStorage.getItem(CATALOG_KEY) || "");
+      if (!pack || pack.v !== 1 || !Array.isArray(pack.artists) || !pack.artists.length) return false;
+      state.artists = pack.artists;
+      state.fits = Array.isArray(pack.fits) ? pack.fits : [];
+      state.pieces = Array.isArray(pack.pieces) ? pack.pieces : [];
+      state.news = Array.isArray(pack.news) ? pack.news : [];
+      state.ready = true;
+      state.fail = false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function saveCatalogCache() {
+    try {
+      localStorage.setItem(CATALOG_KEY, JSON.stringify({
+        v: 1,
+        at: Date.now(),
+        artists: state.artists,
+        fits: state.fits,
+        pieces: state.pieces,
+        news: state.news,
+      }));
+    } catch { /* quota / private */ }
+  }
   async function load() {
     try {
       const [artists, outfits, items, news] = await Promise.all([
@@ -1956,6 +1956,7 @@
       if (dropPingQueued) pingDropLogin();
       state.ready = true;
       state.fail = false;
+      saveCatalogCache();
       await Promise.all([
         pullLikeCounts(),
         pullFollowCounts(),
@@ -1964,8 +1965,10 @@
         logged() ? pullMyFollows() : null,
       ]);
     } catch {
-      state.ready = true;
-      state.fail = true;
+      if (!state.artists.length && !state.fits.length && !state.news.length) {
+        state.ready = true;
+        state.fail = true;
+      }
     }
     render();
     startPulse();
@@ -2004,6 +2007,7 @@
       }
       await pullFollowCounts();
       const followChanged = JSON.stringify(state.followCounts) !== prevFollow;
+      if (fitsChanged || newsChanged) saveCatalogCache();
       if (!fitsChanged && !newsChanged && !followChanged) return;
       const path = hash().path;
       if ((fitsChanged && !path) || (newsChanged && path === "news") || (followChanged && (path === "s" || path === "stars"))) render();
@@ -2058,11 +2062,27 @@
   }
 
   function hash() {
-    const h = (location.hash || "#/").replace(/^#/, "");
-    if (h.includes("access_token=")) return { path: "", id: "" };
-    const clean = h.split("?")[0];
+    const authHash = location.hash || "";
+    if (authHash.includes("access_token=") || authHash.includes("id_token=")) return { path: "", id: "" };
+    const fromPath = (location.pathname || "/").replace(/\/+$/, "") || "/";
+    const fromHash = authHash.startsWith("#/") ? (authHash.replace(/^#/, "").split("?")[0] || "/") : "";
+    const clean = fromPath !== "/" ? fromPath : (fromHash || "/");
     const parts = clean.split("/").filter(Boolean);
+    if (parts[0] === "drip-news") parts[0] = "news";
     return { path: parts[0] || "", id: decodeURIComponent(parts.slice(1).join("/") || "") };
+  }
+  function pathOf(to) {
+    let s = String(to || "/");
+    if (s.startsWith("#")) s = s.slice(1);
+    if (!s.startsWith("/")) s = `/${s}`;
+    return s || "/";
+  }
+  function liftHashUrl() {
+    const h = location.hash || "";
+    if (h.includes("access_token=") || h.includes("id_token=") || h.includes("error=") || /(?:^|#|&)code=/.test(h)) return;
+    if (!h.startsWith("#/")) return;
+    const path = h.slice(1).split("?")[0] || "/";
+    history.replaceState({}, "", path + location.search);
   }
   function authQuery() {
     const q = new URLSearchParams(location.search);
@@ -2075,8 +2095,19 @@
     return q;
   }
   function go(to) {
-    if (location.hash === to) render();
-    else location.hash = to;
+    const next = pathOf(to);
+    const now = `${location.pathname.replace(/\/+$/, "") || "/"}`;
+    if (now === next) {
+      if ((location.hash || "").startsWith("#/") && !location.hash.includes("access_token")) {
+        history.replaceState({}, "", next + location.search);
+      }
+      render();
+      return;
+    }
+    history.pushState({}, "", next);
+    closeDrawer();
+    window.scrollTo(0, 0);
+    render();
   }
 
   function ava(url, name, cls = "ava") {
@@ -2593,10 +2624,9 @@
           <button type="button" class="${state.privateFeed ? "is-on" : ""}" data-private><span class="lock">${I.lock} ${t("private")}</span></button>
         </div>
       </div>
-      ${!state.ready ? `<p class="empty">${t("connecting")}</p>` : ""}
-      ${state.ready && state.fail ? `<p class="empty">${t("connecting")}</p>` : ""}
+      ${state.fail && !rows.length ? `<p class="empty">${t("connecting")}</p>` : ""}
       ${emptyPrivate ? `<p class="empty">${esc(t("privateEmpty"))}</p>` : ""}
-      ${state.ready && !state.fail && !emptyPrivate && !rows.length ? `<p class="empty">${t("empty")}</p>` : rows.map(feedPost).join("")}
+      ${!emptyPrivate && !rows.length && (state.ready || state.fail) ? `<p class="empty">${t("empty")}</p>` : rows.map(feedPost).join("")}
     </div>`;
   }
 
@@ -2647,7 +2677,7 @@
           <button type="button" class="${state.starFollowed ? "is-on" : ""}" data-star-followed>${t("following")}</button>
         </div>
       </div>
-      ${!state.ready ? `<p class="empty">${t("connecting")}</p>` : list.length ? `<div class="stars">${list.map(starPlate).join("")}</div>` : `<p class="empty">${esc(empty)}</p>`}
+      ${list.length ? `<div class="stars">${list.map(starPlate).join("")}</div>` : state.ready || state.fail ? `<p class="empty">${esc(empty)}</p>` : ""}
     </div>`;
   }
 
@@ -2665,7 +2695,7 @@
         </div>
       </header>
       <p class="stars-dek">${t("newsDesc")}</p>
-      ${!state.ready ? `<p class="empty">${t("connecting")}</p>` : rows.length ? rows.map((n) => `
+      ${rows.length ? rows.map((n) => `
         <a class="news-card" href="${hrefNews(n)}">
           ${n.imageUrl ? `<div class="news-cover">${imgTag(n.imageUrl, n.title, `class="${newsPlateClass(n.imageUrl)}"`)}</div>` : `<div class="news-cover"></div>`}
           <div class="news-card-copy">
@@ -2674,7 +2704,7 @@
             ${n.dek ? `<p class="dek">${esc(n.dek)}</p>` : ""}
             <div class="news-card-foot"><span>${t("newsBy")} ${esc(n.source)}</span>${I.fwd}</div>
           </div>
-        </a>`).join("") : `<p class="empty">${t("newsEmpty")}</p>`}
+        </a>`).join("") : state.ready || state.fail ? `<p class="empty">${t("newsEmpty")}</p>` : ""}
     </div>`;
   }
 
@@ -3379,7 +3409,7 @@
     const hasProduct = [n.productName, n.releaseDate, n.buyNote, n.sku].some((v) => v);
     const href = buy && !/^https?:\/\//i.test(buy) ? `https://${buy}` : buy;
     return `<article class="article">
-      <button class="sq article-back" type="button" data-go="#/news">${I.back}</button>
+      <button class="sq article-back" type="button" data-go="/drip-news">${I.back}</button>
       <p class="kicker">${esc(n.category)}</p>
       <h1>${esc(n.title)}</h1>
       <p class="article-by">${esc(n.source)} · ${esc(ago(n.createdAt))}</p>
@@ -3793,7 +3823,7 @@
     const hash = url.hash || "";
     if (hash.includes("access_token=") || hash.includes("id_token=") || hash.includes("error=")) url.hash = "";
     else if (hash.includes("?")) url.hash = hash.split("?")[0];
-    history.replaceState({}, "", url.pathname + url.search + (url.hash.startsWith("#/") ? url.hash : ""));
+    history.replaceState({}, "", url.pathname + url.search + ((url.hash.startsWith("#/") && !url.hash.includes("access_token=")) ? "" : url.hash));
   }
 
   async function finishOAuth() {
@@ -3934,7 +3964,7 @@
     const { path } = hash();
     const nav = path === "stars" || path === "s" ? "stars" : path === "news" || path === "n" ? "news" : ["join", "login", "create", "account", "verify"].includes(path) ? "join" : path === "settings" || path === "saved" ? "settings" : path === "search" || path === "b" ? "" : "home";
     const joinLabel = logged() ? t("account") : t("join");
-    const joinHref = logged() ? "#/account" : "#/join";
+    const joinHref = logged() ? "/account" : "/join";
     const labels = { home: t("home"), stars: t("stars"), news: t("news"), join: joinLabel, settings: t("settings") };
     document.querySelectorAll("[data-nav]").forEach((el) => {
       const key = el.dataset.nav;
@@ -4134,11 +4164,12 @@
       const f = findFit(id);
       if (f) pretty = hrefFit(f);
     } else if (path === "b" && id) pretty = hrefBrand(id);
-    if (pretty && url.hash !== pretty) {
-      url.hash = pretty;
+    if (pretty && url.pathname !== pretty) {
+      url.pathname = pretty;
+      url.hash = "";
       dirty = true;
     }
-    if (dirty) history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    if (dirty) history.replaceState(history.state, "", `${url.pathname}${url.search}`);
   }
 
   function cycleRegion() {
@@ -4165,8 +4196,25 @@
     }
     const goTo = e.target.closest("[data-go]")?.dataset.go;
     if (goTo) { e.preventDefault(); hideSheet(); hideDlg(); closeDrawer(); go(goTo); return; }
+    const a = e.target.closest("a[href]");
+    if (a) {
+      const href = a.getAttribute("href") || "";
+      const spa = (href.startsWith("/") || href.startsWith("#/"))
+        && !href.startsWith("//")
+        && !/\.html(\?|#|$)/i.test(href)
+        && !a.target
+        && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+      if (spa) {
+        e.preventDefault();
+        hideSheet();
+        hideDlg();
+        closeDrawer();
+        go(href);
+        return;
+      }
+    }
     const navA = e.target.closest("a[data-nav], .drawer-nav a, .site-nav a");
-    if (navA && navA.getAttribute("href")?.startsWith("#")) { closeDrawer(); }
+    if (navA) closeDrawer();
     if (e.target.closest("[data-back]")) { e.preventDefault(); history.back(); return; }
     const like = e.target.closest("button[data-like]")?.dataset.like;
     if (like) { e.preventDefault(); toggleLike(like); return; }
@@ -4283,7 +4331,7 @@
     if (tab != null) {
       e.preventDefault();
       closeDrawer();
-      const dest = ["#/", "#/stars", "#/news", logged() ? "#/account" : "#/join"][Number(tab)];
+      const dest = ["/", "/stars", "/drip-news", logged() ? "/account" : "/join"][Number(tab)];
       go(dest);
       return;
     }
@@ -4402,7 +4450,13 @@
     }
   });
 
-  window.addEventListener("hashchange", () => { closeDrawer(); window.scrollTo(0, 0); render(); });
+  window.addEventListener("popstate", () => { closeDrawer(); window.scrollTo(0, 0); render(); });
+  window.addEventListener("hashchange", () => {
+    if ((location.hash || "").startsWith("#/") && !location.hash.includes("access_token") && !location.hash.includes("id_token")) liftHashUrl();
+    closeDrawer();
+    window.scrollTo(0, 0);
+    render();
+  });
   $("#btnMenu")?.addEventListener("click", () => {
     const el = $("#drawer");
     if (el && !el.hidden) closeDrawer();
@@ -4412,16 +4466,22 @@
   $("#btnSearchDrawer")?.addEventListener("click", () => { closeDrawer(); searchUI(); });
 
   (async () => {
+    liftHashUrl();
     restoreSession();
-    await refreshIfNeeded();
-    const dest = await finishOAuth();
-    if (logged() && !dest) await afterAuth();
+    hydrateCatalogCache();
     paintChrome();
-    if (dest === "join") go("#/join");
-    else if (dest === "account") go("#/account");
-    else if (dest === "home") go("#/");
-    else if (dest === "verify") go("#/verify");
-    else render();
+    render();
+    try {
+      await refreshIfNeeded();
+      const dest = await finishOAuth();
+      if (logged() && !dest) await afterAuth();
+      paintChrome();
+      if (dest === "join") go("/join");
+      else if (dest === "account") go("/account");
+      else if (dest === "home") go("/");
+      else if (dest === "verify") go("/verify");
+      else render();
+    } catch { /* keep painted UI */ }
     load();
   })();
 })();

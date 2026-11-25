@@ -24,7 +24,14 @@ export default {
     if (path === "/api/auth-mail") {
       return authMailResponse(request, env);
     }
-    if (env.ASSETS) return env.ASSETS.fetch(request);
+    if (env.ASSETS) {
+      const url = new URL(request.url);
+      const asset = await env.ASSETS.fetch(request);
+      if (asset.status !== 404) return asset;
+      if (request.method !== "GET" && request.method !== "HEAD") return asset;
+      if (url.pathname.startsWith("/api/") || /\.[a-z0-9]+$/i.test(url.pathname)) return asset;
+      return env.ASSETS.fetch(new Request(new URL("/index.html", url.origin), request));
+    }
     return new Response("Not found", { status: 404 });
   },
   async scheduled(event, env, ctx) {

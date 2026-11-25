@@ -387,6 +387,37 @@ async function smtpSend(env, opt) {
     if (one && !toList.includes(one)) toList.push(one);
   }
   if (!toList.length) return { ok: true, sent: 0 };
+  const resendKey = String(await readSecret(env.RESEND_API_KEY) || "").trim();
+  if (resendKey) {
+    const from = String(env.RESEND_FROM || "THE WEARS ON <thewears.on@gmail.com>");
+    for (const to of toList) {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from, to: [to], subject: opt.subject, html: opt.html, text: opt.text }),
+      });
+      if (!res.ok) throw new Error(`Resend ${res.status}`);
+    }
+    return { ok: true, sent: toList.length, via: "resend" };
+  }
+  const brevoKey = String(await readSecret(env.BREVO_API_KEY) || "").trim();
+  if (brevoKey) {
+    for (const to of toList) {
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: { "api-key": brevoKey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender: { name: "THE WEARS ON", email: "thewears.on@gmail.com" },
+          to: [{ email: to }],
+          subject: opt.subject,
+          htmlContent: opt.html,
+          textContent: opt.text,
+        }),
+      });
+      if (!res.ok) throw new Error(`Brevo ${res.status}`);
+    }
+    return { ok: true, sent: toList.length, via: "brevo" };
+  }
   let last;
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
@@ -616,7 +647,7 @@ function dropPathSlug(title, newsId) {
 function dropMailText(wave) {
   const newsId = wave.newsId || "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
   const stores = Array.isArray(wave.stores) ? wave.stores : [];
-  const page = `https://thewearson.com/#/n/${dropPathSlug(wave.title, newsId)}`;
+  const page = `https://thewearson.com/n/${dropPathSlug(wave.title, newsId)}`;
   return [
     "THE WEARS ON",
     "",
@@ -633,7 +664,7 @@ function dropMailText(wave) {
 
 function dropMailHtml(wave) {
   const newsId = wave.newsId || "8cbc034c-8bee-4f9f-a7c9-9b32672e1e65";
-  const page = "https://thewearson.com/#/n/" + dropPathSlug(wave.title, newsId);
+  const page = "https://thewearson.com/n/" + dropPathSlug(wave.title, newsId);
   const stores = Array.isArray(wave.stores) ? wave.stores : [];
   const title = escHtml(String(wave.title || "MIAMI HEAT × CACTUS JACK × NIKE × GTA VI").toUpperCase());
   const when = escHtml(wave.when || "20 NOV 2026 · 10:00 AM ET");
@@ -816,14 +847,37 @@ async function serviceRole(env) {
   return "";
 }
 
-function dueDropJobs(env) {
-  return [
-    {
-      newsId: env.AF1_NEWS_ID || AF1_NEWS_ID,
-      at: env.AF1_AT || AF1_AT,
-      storeIds: ["snkrs", "cactus"],
-    },
-  ];
+async function dueDropJobs(env) {
+  const jobs = [];
+  const seen = new Set();
+  const push = (newsId, at, storeIds, hard) => {
+    const id = packId(newsId, env);
+    if (!id || seen.has(id)) return;
+    const t = Date.parse(at);
+    if (!Number.isFinite(t) || Date.now() < t) return;
+    if (!hard && Date.now() - t > 12 * 60 * 60 * 1000) return;
+    const ids = [...new Set((storeIds || []).map(String).filter(Boolean))];
+    if (!ids.length) return;
+    seen.add(id);
+    jobs.push({ newsId: id, at: new Date(t).toISOString(), storeIds: ids });
+  };
+  push(env.AF1_NEWS_ID || AF1_NEWS_ID, env.AF1_AT || AF1_AT, ["snkrs", "cactus"], true);
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/drip_news?select=id,drop_json,buy_note&order=created_at.desc&limit=80`, {
+      headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` },
+    });
+    const rows = await res.json().catch(() => []);
+    for (const row of Array.isArray(rows) ? rows : []) {
+      const json = parseDropJson(row.drop_json);
+      const packed = parseDropNote(row.buy_note);
+      if (json?.on === false || packed.off) continue;
+      const at = String(json?.at || packed.at || "").trim();
+      const listed = json?.stores?.length ? json.stores : packed.stores;
+      const stores = normalizeStores(listed);
+      push(row.id, at, stores.map((s) => s.id), false);
+    }
+  } catch { /* keep hardcoded jobs */ }
+  return jobs;
 }
 
 async function rpcNotify(env, fn, args) {
@@ -873,13 +927,15 @@ async function pageArmedEmails(env, newsId, after = "") {
   });
   if (svc.ok) {
     const emails = [...new Set((Array.isArray(svc.data) ? svc.data : []).map((row) => cleanEmail(row?.email)).filter(Boolean))];
-    const state = await restNotify(env, `/rest/v1/drop_notify_state?pack_id=eq.${encodeURIComponent(pack)}&select=sent_store_ids,wave`);
+    let state = await restNotify(env, `/rest/v1/drop_notify_state?pack_id=eq.${encodeURIComponent(pack)}&select=sent_store_ids,lock_done,wave`);
+    if (!state.ok) state = await restNotify(env, `/rest/v1/drop_notify_state?pack_id=eq.${encodeURIComponent(pack)}&select=sent_store_ids,wave`);
     const row = Array.isArray(state.data) ? state.data[0] : null;
     return {
       ok: true,
       emails,
       n: parseExactCount(svc.headers, emails.length),
       sentStoreIds: [...new Set((Array.isArray(row?.sent_store_ids) ? row.sent_store_ids : []).map(String))],
+      lockDone: !!row?.lock_done,
       wave: row?.wave && typeof row.wave === "object" ? row.wave : null,
     };
   }
@@ -904,15 +960,17 @@ async function pageArmedEmails(env, newsId, after = "") {
     emails,
     n: Number(rpc.data?.n) || 0,
     sentStoreIds: [...new Set((Array.isArray(rpc.data?.sent_store_ids) ? rpc.data.sent_store_ids : []).map(String))],
+    lockDone: !!rpc.data?.lock_done,
     wave: rpc.data?.wave && typeof rpc.data.wave === "object" ? rpc.data.wave : null,
   };
 }
 
-async function touchArmedState(env, newsId, { storeId, wave } = {}) {
+async function touchArmedState(env, newsId, { storeId, wave, lockDone } = {}) {
   const pack = packId(newsId, env);
   const svcKey = await serviceRole(env);
   if (svcKey) {
-    const cur = await restNotify(env, `/rest/v1/drop_notify_state?pack_id=eq.${encodeURIComponent(pack)}&select=sent_store_ids,lock_done,wave`);
+    let cur = await restNotify(env, `/rest/v1/drop_notify_state?pack_id=eq.${encodeURIComponent(pack)}&select=sent_store_ids,lock_done,wave`);
+    if (!cur.ok) cur = await restNotify(env, `/rest/v1/drop_notify_state?pack_id=eq.${encodeURIComponent(pack)}&select=sent_store_ids,wave`);
     const row = Array.isArray(cur.data) ? cur.data[0] : null;
     const sentStoreIds = [...new Set([
       ...(Array.isArray(row?.sent_store_ids) ? row.sent_store_ids : []).map(String),
@@ -923,7 +981,7 @@ async function touchArmedState(env, newsId, { storeId, wave } = {}) {
       body: {
         pack_id: pack,
         sent_store_ids: sentStoreIds,
-        lock_done: !!row?.lock_done,
+        lock_done: lockDone === true || !!row?.lock_done,
         wave: storeId ? null : (wave === undefined ? row?.wave || null : wave),
         updated_at: new Date().toISOString(),
       },
@@ -973,7 +1031,7 @@ async function drainArmedStore(env, newsId, storeId) {
 async function drainDueFromDb(env) {
   const out = [];
   const blocked = await gmailAuthBlocked();
-  for (const job of dueDropJobs(env)) {
+  for (const job of await dueDropJobs(env)) {
     const at = Date.parse(job.at);
     if (!Number.isFinite(at) || Date.now() < at) continue;
     const page = await pageArmedEmails(env, job.newsId, "");
@@ -982,16 +1040,17 @@ async function drainDueFromDb(env) {
       continue;
     }
     const remain = job.storeIds.filter((id) => !page.sentStoreIds.includes(id));
-    if (!remain.length) {
-      out.push({ newsId: job.newsId, already: true, n: page.n, sentStoreIds: page.sentStoreIds });
+    if (page.lockDone || !remain.length) {
+      if (!page.lockDone) await touchArmedState(env, job.newsId, { lockDone: true }).catch(() => []);
+      out.push({ newsId: job.newsId, already: true, auto_email_sent: true, n: page.n, sentStoreIds: page.sentStoreIds });
       continue;
     }
     if (packId(job.newsId, env) === AF1_NEWS_ID) {
       let sentStoreIds = page.sentStoreIds;
       for (const id of remain) {
-        sentStoreIds = await touchArmedState(env, job.newsId, { storeId: id });
+        sentStoreIds = await touchArmedState(env, job.newsId, { storeId: id, lockDone: true });
       }
-      out.push({ newsId: job.newsId, sealed: true, n: page.n, sentStoreIds });
+      out.push({ newsId: job.newsId, sealed: true, auto_email_sent: true, n: page.n, sentStoreIds });
       continue;
     }
     if (blocked) {
@@ -1007,6 +1066,9 @@ async function drainDueFromDb(env) {
     for (const storeId of left) {
       out.push(await drainArmedStore(env, job.newsId, storeId));
     }
+    const after = await pageArmedEmails(env, job.newsId, "");
+    const leftover = job.storeIds.filter((id) => !(after.ok ? after.sentStoreIds : page.sentStoreIds).includes(id));
+    if (!leftover.length) await touchArmedState(env, job.newsId, { lockDone: true }).catch(() => []);
   }
   return out.length ? { ok: true, waves: out } : { skipped: true };
 }
@@ -1117,7 +1179,12 @@ async function sendOneDropMail(env, newsId, opt = {}) {
       done: false,
       early: true,
     };
-    const subject = dropMailSubject(stores);
+    if (String(opt.subject || "").trim()) wave.subject = String(opt.subject).trim().slice(0, 160);
+    if (String(opt.link || opt.url || "").trim()) {
+      const href = hrefAbs(opt.link || opt.url);
+      if (href && stores[0]) stores[0] = { ...stores[0], url: href };
+    }
+    const subject = wave.subject || dropMailSubject(stores);
     const text = dropMailText(wave);
     const html = dropMailHtml(wave);
     const hook = await readSecret(env.DROP_MAIL_HOOK);
@@ -1222,19 +1289,12 @@ export async function dropTickResponse(request, env) {
     const typo = !!(await readSecret(env && env.GMAIL_APPPASSWORD));
     return corsJson(request, 200, {
       ok: true,
-      v: "web92",
+      v: "web95",
       gmail: { GMAIL_APP_PASSWORD: app, GMAIL_APPPASSWORD: typo },
     });
   }
   if (request.method !== "POST") return corsJson(request, 405, { error: "POST only." });
-  let body = {};
-  try { body = await request.json(); } catch { body = {}; }
-  try {
-    const out = await fireDueDrops(env, body);
-    return corsJson(request, 200, { ok: true, ...out });
-  } catch (err) {
-    return corsJson(request, 500, { error: String(err && err.message || err) });
-  }
+  return corsJson(request, 200, { ok: true, skipped: true, client: true });
 }
 
 export async function dropStudioResponse(request, env, ctx) {
@@ -1296,6 +1356,8 @@ export async function dropStudioResponse(request, env, ctx) {
     cursor: body.cursor,
     total: body.total,
     done: body.done === true,
+    subject: String(body.subject || "").trim().slice(0, 160),
+    link: String(body.link || body.url || "").trim(),
   };
   const run = () => sendDueDropMail(env, job);
   if (ctx && typeof ctx.waitUntil === "function" && extra.length) {
