@@ -2624,7 +2624,6 @@
           <button type="button" class="${state.privateFeed ? "is-on" : ""}" data-private><span class="lock">${I.lock} ${t("private")}</span></button>
         </div>
       </div>
-      ${state.fail && !rows.length ? `<p class="empty">${t("connecting")}</p>` : ""}
       ${emptyPrivate ? `<p class="empty">${esc(t("privateEmpty"))}</p>` : ""}
       ${!emptyPrivate && !rows.length && (state.ready || state.fail) ? `<p class="empty">${t("empty")}</p>` : rows.map(feedPost).join("")}
     </div>`;
@@ -2877,9 +2876,6 @@
       pullMember(key).then(() => { if (memberStillOpen(key)) render(); });
       const name = person?.username || nickOf(key) || nickOf(hint.nick) || "MEMBER";
       const avatar = person?.avatar || hint.avatar || "";
-      if (!name || name === "MEMBER") {
-        return `<div class="acc-page mem-page"><p class="empty">${t("connecting")}</p></div>`;
-      }
       return `<div class="acc-page mem-page">
         <div class="back-row"><button class="sq" type="button" data-back>${I.back}</button></div>
         <article class="plate acc-plate">
@@ -2889,7 +2885,6 @@
             <h1 class="mem-name">${esc(name)}</h1>
           </div>
         </article>
-        <p class="empty">${t("connecting")}</p>
       </div>`;
     }
     if (person.missing) {
