@@ -5,6 +5,7 @@ wrangler.toml
 _routes.json
 .DS_Store
 .tmp-*
+.wrangler
 app-icon
 soon.js
 node_modules
